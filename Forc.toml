@@ -1,4 +1,6 @@
 [workspace]
 members = [
   "./libraries/interfaces",
+  "./libraries/utils",
+  "./libraries/math",
 ]
