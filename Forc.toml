@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "./contracts/mira_amm_contract",
   "./libraries/interfaces",
   "./libraries/utils",
   "./libraries/math",
