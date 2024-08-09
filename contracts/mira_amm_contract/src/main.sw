@@ -312,6 +312,10 @@ impl MiraAMM for Contract {
         storage.pool_ids.load_vec()
     }
 
+    fn fees() -> (u64, u64, u64, u64) {
+        (LP_FEE_VOLATILE, LP_FEE_STABLE, PROTOCOL_FEE_VOLATILE, PROTOCOL_FEE_STABLE)
+    }
+
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         reentrancy_guard();
