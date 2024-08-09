@@ -14,11 +14,11 @@ use ::data_structures::{
 // TODO: add fee management
 abi MiraAMM {
     #[storage(read, write)]
-    fn add_pool(
-        token_a_contract_id: ContractId,
-        token_a_sub_id: b256,
-        token_b_contract_id: ContractId,
-        token_b_sub_id: b256,
+    fn create_pool(
+        token_0_contract_id: ContractId,
+        token_0_sub_id: b256,
+        token_1_contract_id: ContractId,
+        token_1_sub_id: b256,
         is_stable: bool,
     );
 

@@ -85,12 +85,14 @@ fn lp_asset_exists(asset: AssetId) -> bool {
 }
 
 #[storage(read, write)]
-fn initialize_pool(pool_id: PoolId, is_stable: bool, a_decimals: u8, b_decimals: u8, lp_name: String) {
+fn initialize_pool(pool_id: PoolId, a_decimals: u8, b_decimals: u8, lp_name: String) {
     require(storage.pools.get(pool_id).try_read().is_none(), InputError::PoolAlreadyExists(pool_id));
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
-    let pool_info = PoolInfo::new(pool_id, a_decimals, b_decimals, is_stable);
+    let pool_info = PoolInfo::new(pool_id, a_decimals, b_decimals);
     storage.pools.insert(pool_id, pool_info);
     storage.pool_ids.push(pool_id);
+
+    require(get_lp_total_supply(pool_lp_asset).is_none(), InputError::LPTokenHashCollision);
     storage.lp_name.get(pool_lp_asset).write_slice(lp_name);
     storage.lp_total_supply.insert(pool_lp_asset, 0);
 }
@@ -191,23 +193,23 @@ impl SRC20 for Contract {
 
 impl MiraAMM for Contract {
     #[storage(read, write)]
-    fn add_pool(
-        token_a_contract_id: ContractId,
-        token_a_sub_id: b256,
-        token_b_contract_id: ContractId,
-        token_b_sub_id: b256,
+    fn create_pool(
+        token_0_contract_id: ContractId,
+        token_0_sub_id: b256,
+        token_1_contract_id: ContractId,
+        token_1_sub_id: b256,
         is_stable: bool,
     ) {
-        let token_a_id = AssetId::new(token_a_contract_id, token_a_sub_id);
-        let token_b_id = AssetId::new(token_b_contract_id, token_b_sub_id);
-        let pool_id = (token_a_id, token_b_id);
+        let token_0_id = AssetId::new(token_0_contract_id, token_0_sub_id);
+        let token_1_id = AssetId::new(token_1_contract_id, token_1_sub_id);
+        let pool_id: PoolId = (token_0_id, token_1_id, is_stable);
         validate_pool_id(pool_id);
 
-        let (a_symbol, a_decimals) = get_symbol_and_decimals(token_a_contract_id, token_a_id);
-        let (b_symbol, b_decimals) = get_symbol_and_decimals(token_b_contract_id, token_b_id);
-        let lp_name = build_lp_name(a_symbol, b_symbol);
+        let (symbol_0, decimals_0) = get_symbol_and_decimals(token_0_contract_id, token_0_id);
+        let (symbol_1, decimals_1) = get_symbol_and_decimals(token_1_contract_id, token_1_id);
+        let lp_name = build_lp_name(symbol_0, symbol_1);
 
-        initialize_pool(pool_id, is_stable, a_decimals, b_decimals, lp_name);
+        initialize_pool(pool_id, decimals_0, decimals_1, lp_name);
 
         log(RegisterPoolEvent {
             pool_id,
@@ -292,7 +294,7 @@ impl MiraAMM for Contract {
         let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
         require(asset_0_in > 0 || asset_1_in > 0, InputError::ZeroInputAmount);
 
-        validate_curve(pool.is_stable, balance_0, balance_1, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
+        validate_curve(pool_id.2, balance_0, balance_1, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
         update_reserves(pool, asset_0_in, asset_1_in, asset_0_out, asset_1_out);
 
         log(SwapEvent{ pool_id, recipient: to, asset_0_in, asset_1_in, asset_0_out, asset_1_out });

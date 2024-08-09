@@ -18,6 +18,8 @@ pub enum InputError {
     IdenticalAssets: (),
     /// Provided unsorted asset pair as pool id.
     UnsortedAssetPair: (),
+    /// Hash collision for LP token.
+    LPTokenHashCollision: (),
 }
 
 /// Errors related to AMM logic.

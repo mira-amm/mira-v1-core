@@ -21,11 +21,11 @@ pub fn get_lp_asset(pool_id: PoolId) -> (b256, AssetId) {
     (lp_sub_id, AssetId::new(ContractId::this(), lp_sub_id))
 }
 
-pub fn build_lp_name(name_a: String, name_b: String) -> String {
+pub fn build_lp_name(symbol_0: String, symbol_1: String) -> String {
     let mut result = Bytes::new();
-    push_bytes(result, name_a.as_bytes());
+    push_bytes(result, symbol_0.as_bytes());
     push_bytes(result, String::from_ascii_str("-").as_bytes());
-    push_bytes(result, name_b.as_bytes());
+    push_bytes(result, symbol_1.as_bytes());
     push_bytes(result, String::from_ascii_str(" LP").as_bytes());
     String::from_ascii(result)
 }

@@ -1,7 +1,7 @@
 library;
 
-// TODO: add is_stable to pool id
-pub type PoolId = (AssetId, AssetId);
+/// (asset_0, asset_1, is_stable)
+pub type PoolId = (AssetId, AssetId, bool);
 
 pub struct Asset {
     pub id: AssetId,
@@ -20,7 +20,6 @@ pub struct PoolInfo {
     pub reserve_1: u64,
     pub decimals_0: u8,
     pub decimals_1: u8,
-    pub is_stable: bool, // TODO: move to pool id 
 }
 
 impl PoolInfo {
@@ -28,7 +27,6 @@ impl PoolInfo {
         id: PoolId,
         decimals_0: u8,
         decimals_1: u8,
-        is_stable: bool,
     ) -> Self {
         Self {
             id,
@@ -36,7 +34,6 @@ impl PoolInfo {
             reserve_1: 0,
             decimals_0,
             decimals_1,
-            is_stable,
         }
     }
 
@@ -47,7 +44,6 @@ impl PoolInfo {
             reserve_1,
             decimals_0: self.decimals_0,
             decimals_1: self.decimals_1,
-            is_stable: self.is_stable,
         }
     }
 }
@@ -58,7 +54,6 @@ pub struct PoolInfoView {
     pub liquidity: u64, // TODO: make it Asset
     pub decimals_0: u8,
     pub decimals_1: u8,
-    pub is_stable: bool,
 }
 
 impl PoolInfoView {
@@ -72,7 +67,6 @@ impl PoolInfoView {
             liquidity: liquidity,
             decimals_0: pool.decimals_0,
             decimals_1: pool.decimals_1,
-            is_stable: pool.is_stable,
         }
     }
 }

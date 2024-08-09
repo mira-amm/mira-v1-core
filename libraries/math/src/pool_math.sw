@@ -10,8 +10,8 @@ pub fn proportional_value(b: u64, c: u64, a: u64) -> u64 {
     u64::try_from(b.as_u256() * c.as_u256() / a.as_u256()).unwrap()
 }
 
-pub fn initial_liquidity(deposit_a: u64, deposit_b: u64) -> u64 {
-    let product = deposit_a.as_u256() * deposit_b.as_u256();
+pub fn initial_liquidity(deposit_0: u64, deposit_1: u64) -> u64 {
+    let product = deposit_0.as_u256() * deposit_1.as_u256();
     u64::try_from(product.sqrt()).unwrap()
 }
 
