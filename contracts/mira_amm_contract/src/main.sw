@@ -152,6 +152,22 @@ fn get_pool_liquidity(pool_id: PoolId) -> u64 {
     get_lp_total_supply(pool_lp_asset).unwrap()
 }
 
+#[storage(read)]
+fn get_amount_in(asset_id: AssetId) -> u64 {
+    let total_reserve = get_total_reserve(asset_id);
+    let balance = this_balance(asset_id);
+    balance - total_reserve
+}
+
+#[storage(read)]
+fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64) {
+    let total_reserve = get_total_reserve(asset_id);
+    let balance = this_balance(asset_id);
+    let after_out = total_reserve - amount_out;
+    let amount_in = if balance > after_out { balance - after_out } else { 0 };
+    (balance, amount_in)
+}
+
 impl SRC20 for Contract {
     #[storage(read)]
     fn total_assets() -> u64 {
@@ -223,13 +239,8 @@ impl MiraAMM for Contract {
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         let mut pool = get_pool(pool_id);
-
-        let total_reserve_0 = get_total_reserve(pool_id.0);
-        let total_reserve_1 = get_total_reserve(pool_id.1);
-        let balance_0 = this_balance(pool_id.0);
-        let balance_1 = this_balance(pool_id.1);
-        let amount_0 = balance_0 - total_reserve_0;
-        let amount_1 = balance_1 - total_reserve_1;
+        let amount_0 = get_amount_in(pool_id.0);
+        let amount_1 = get_amount_in(pool_id.1);
 
         let mut total_liquidity = get_pool_liquidity(pool_id);
 
@@ -285,20 +296,8 @@ impl MiraAMM for Contract {
         }
         // TODO: flash loans logic
 
-        let total_reserve_0 = get_total_reserve(pool_id.0);
-        let total_reserve_1 = get_total_reserve(pool_id.1);
-        let balance_0 = this_balance(pool_id.0);
-        let balance_1 = this_balance(pool_id.1);
-        let amount_0_in = if balance_0 > total_reserve_0 - amount_0_out {
-            balance_0 - (total_reserve_0 - amount_0_out)
-        } else {
-            0
-        };
-        let amount_1_in = if balance_1 > total_reserve_1 - amount_1_out {
-            balance_1 - (total_reserve_1 - amount_1_out)
-        } else {
-            0
-        };
+        let (balance_0, amount_0_in) = get_amount_in_accounting_out(pool_id.0, amount_0_out);
+        let (balance_1, amount_1_in) = get_amount_in_accounting_out(pool_id.1, amount_1_out);
         require(amount_0_in > 0 || amount_1_in > 0, InputError::ZeroInputAmount);
 
         validate_curve(pool.is_stable, balance_0, balance_1, pool.reserves.a.amount, pool.reserves.b.amount, pool.decimals_a, pool.decimals_b);
