@@ -23,10 +23,8 @@ use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve
 use interfaces::mira_amm::MiraAMM;
 use interfaces::data_structures::{
     Asset,
-    AssetPair,
     PoolId,
     PoolInfo,
-    RemoveLiquidityInfo,
     PoolInfoView,
 };
 use interfaces::errors::{InputError, AmmError};
@@ -152,18 +150,12 @@ fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64
 
 
 #[storage(read, write)]
-fn update_reserves(pool_id: PoolId, pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_out: u64, amount_1_out: u64) {
-    let assets_in = AssetPair::new(
-        Asset::new(pool_id.0, amount_0_in),
-        Asset::new(pool_id.1, amount_1_in),
-    );
-    let assets_out = AssetPair::new(
-        Asset::new(pool_id.0, amount_0_out),
-        Asset::new(pool_id.1, amount_1_out),
-    );
-    pool.reserves = pool.reserves + assets_in - assets_out;
-    storage.pools.insert(pool_id, pool);
-    update_total_reserves(pool_id);
+fn update_reserves(pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_out: u64, amount_1_out: u64) {
+    let reserve_0 = pool.reserve_0 + amount_0_in - amount_0_out;
+    let reserve_1 = pool.reserve_1 + amount_1_in - amount_1_out;
+    let updated_pool = pool.copy_with_reserves(reserve_0, reserve_1);
+    storage.pools.insert(pool.id, updated_pool);
+    update_total_reserves(pool.id);
 }
 
 impl SRC20 for Contract {
@@ -237,72 +229,72 @@ impl MiraAMM for Contract {
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         let mut pool = get_pool(pool_id);
-        let amount_0 = get_amount_in(pool_id.0);
-        let amount_1 = get_amount_in(pool_id.1);
+        let asset_0_in = get_amount_in(pool_id.0);
+        let asset_1_in = get_amount_in(pool_id.1);
 
         let mut total_liquidity = get_pool_liquidity(pool_id);
 
         let added_liquidity: u64 = if total_liquidity == 0 {
             mint_lp_asset(pool_id, Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
-            initial_liquidity(amount_0, amount_1) - MINIMUM_LIQUIDITY
+            initial_liquidity(asset_0_in, asset_1_in) - MINIMUM_LIQUIDITY
         } else {
             min(
-                proportional_value(amount_0, total_liquidity, pool.reserves.a.amount),
-                proportional_value(amount_1, total_liquidity, pool.reserves.b.amount)
+                proportional_value(asset_0_in, total_liquidity, pool.reserve_0),
+                proportional_value(asset_1_in, total_liquidity, pool.reserve_1)
             )
         };
         require(added_liquidity > 0, AmmError::NoLiquidityAdded);
 
         let minted = mint_lp_asset(pool_id, to, added_liquidity);
-        update_reserves(pool_id, pool, amount_0, amount_1, 0, 0);
+        update_reserves(pool, asset_0_in, asset_1_in, 0, 0);
 
-        log(MintEvent { pool_id, recipient: to, liquidity: minted, assets_in: added_assets });
+        log(MintEvent { pool_id, recipient: to, liquidity: minted, asset_0_in, asset_1_in });
         minted
     }
 
     #[payable]
     #[storage(read, write)]
-    fn burn(pool_id: PoolId, to: Identity) -> AssetPair {
+    fn burn(pool_id: PoolId, to: Identity) -> (u64, u64) {
         validate_pool_id(pool_id);
 
         let burned_liquidity = Asset::new(msg_asset_id(), msg_amount());
         let total_liquidity = burn_lp_asset(pool_id, burned_liquidity);
         
         let mut pool = get_pool(pool_id);
-        let amount_0_out = proportional_value(burned_liquidity.amount, pool.reserves.a.amount, total_liquidity);
-        let amount_1_out = proportional_value(burned_liquidity.amount, pool.reserves.b.amount, total_liquidity);
+        let asset_0_out = proportional_value(burned_liquidity.amount, pool.reserve_0, total_liquidity);
+        let asset_1_out = proportional_value(burned_liquidity.amount, pool.reserve_1, total_liquidity);
 
-        transfer(recepient, pool_id.0, amount_0_out);
-        transfer(recepient, pool_id.1, amount_1_out);
+        transfer(to, pool_id.0, asset_0_out);
+        transfer(to, pool_id.1, asset_1_out);
 
-        update_reserves(pool_id, pool, 0, 0, amount_0_out, amount_1_out);
+        update_reserves(pool, 0, 0, asset_0_out, asset_1_out);
 
-        log(BurnEvent { pool_id, recipient: to, liquidity: burned_liquidity, assets_out: removed_assets });
-        removed_assets
+        log(BurnEvent { pool_id, recipient: to, liquidity: burned_liquidity, asset_0_out, asset_1_out });
+        (asset_0_out, asset_1_out)
     }
 
     #[payable]
     #[storage(read, write)]
-    fn swap(pool_id: PoolId, amount_0_out: u64, amount_1_out: u64, to: Identity) {
+    fn swap(pool_id: PoolId, asset_0_out: u64, asset_1_out: u64, to: Identity) {
         let mut pool = get_pool(pool_id);
-        require(amount_0_out > 0 || amount_1_out > 0, InputError::ZeroOutputAmount);
-        require(amount_0_out < pool.reserves.a.amount && amount_1_out < pool.reserves.b.amount, AmmError::InsufficientLiquidity);
+        require(asset_0_out > 0 || asset_1_out > 0, InputError::ZeroOutputAmount);
+        require(asset_0_out < pool.reserve_0 && asset_1_out < pool.reserve_1, AmmError::InsufficientLiquidity);
         // Optimistically transfer assets
-        if (amount_0_out > 0) {
-            transfer(to, pool_id.0, amount_0_out);
+        if (asset_0_out > 0) {
+            transfer(to, pool_id.0, asset_0_out);
         }
-        if (amount_1_out > 0) {
-            transfer(to, pool_id.1, amount_1_out);
+        if (asset_1_out > 0) {
+            transfer(to, pool_id.1, asset_1_out);
         }
         // TODO: flash loans logic
 
-        let (balance_0, amount_0_in) = get_amount_in_accounting_out(pool_id.0, amount_0_out);
-        let (balance_1, amount_1_in) = get_amount_in_accounting_out(pool_id.1, amount_1_out);
-        require(amount_0_in > 0 || amount_1_in > 0, InputError::ZeroInputAmount);
+        let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out);
+        let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
+        require(asset_0_in > 0 || asset_1_in > 0, InputError::ZeroInputAmount);
 
-        validate_curve(pool.is_stable, balance_0, balance_1, pool.reserves.a.amount, pool.reserves.b.amount, pool.decimals_a, pool.decimals_b);
-        update_reserves(pool_id, pool, amount_0_in, amount_1_in, amount_0_out, amount_1_out);
+        validate_curve(pool.is_stable, balance_0, balance_1, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
+        update_reserves(pool, asset_0_in, asset_1_in, asset_0_out, asset_1_out);
 
-        log(SwapEvent{ pool_id, recipient: to, assets_in, assets_out });
+        log(SwapEvent{ pool_id, recipient: to, asset_0_in, asset_1_in, asset_0_out, asset_1_out });
     }
 }

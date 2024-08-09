@@ -1,6 +1,6 @@
 library;
 
-use ::data_structures::{Asset, AssetPair, PoolId};
+use ::data_structures::{Asset, PoolId};
 
 pub struct RegisterPoolEvent {
     pub pool_id: PoolId,
@@ -10,19 +10,23 @@ pub struct MintEvent {
     pub pool_id: PoolId,
     pub recipient: Identity,
     pub liquidity: Asset,
-    pub assets_in: AssetPair,
+    pub asset_0_in: u64,
+    pub asset_1_in: u64,
 }
 
 pub struct BurnEvent {
     pub pool_id: PoolId,
     pub recipient: Identity,
     pub liquidity: Asset,
-    pub assets_out: AssetPair,
+    pub asset_0_out: u64,
+    pub asset_1_out: u64,
 }
 
 pub struct SwapEvent {
     pub pool_id: PoolId,
     pub recipient: Identity,
-    pub assets_in: AssetPair,
-    pub assets_out: AssetPair,
+    pub asset_0_in: u64,
+    pub asset_1_in: u64,
+    pub asset_0_out: u64,
+    pub asset_1_out: u64,
 }

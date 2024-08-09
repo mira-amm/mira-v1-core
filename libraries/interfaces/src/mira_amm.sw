@@ -5,9 +5,7 @@ use ::data_structures::{
     Asset,
     PoolId,
     PoolInfo,
-    RemoveLiquidityInfo,
     PoolInfoView,
-    AssetPair,
 };
 
 
@@ -35,7 +33,7 @@ abi MiraAMM {
 
     #[payable]
     #[storage(read, write)]
-    fn burn(pool_id: PoolId, to: Identity) -> AssetPair;
+    fn burn(pool_id: PoolId, to: Identity) -> (u64, u64);
 
     #[payable]
     #[storage(read, write)]
