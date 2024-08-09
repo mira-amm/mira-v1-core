@@ -128,10 +128,11 @@ fn burn_lp_asset(pool_id: PoolId, burned_liquidity: Asset) -> u64 {
 }
 
 #[storage(read)]
-fn get_pool_liquidity(pool_id: PoolId) -> u64 {
+fn get_pool_liquidity(pool_id: PoolId) -> Asset {
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
     // must be present in the storage
-    get_lp_total_supply(pool_lp_asset).unwrap()
+    let liquidity = get_lp_total_supply(pool_lp_asset).unwrap();
+    Asset::new(pool_lp_asset, liquidity)
 }
 
 #[storage(read)]
@@ -234,7 +235,7 @@ impl MiraAMM for Contract {
         let asset_0_in = get_amount_in(pool_id.0);
         let asset_1_in = get_amount_in(pool_id.1);
 
-        let mut total_liquidity = get_pool_liquidity(pool_id);
+        let total_liquidity = get_pool_liquidity(pool_id).amount;
 
         let added_liquidity: u64 = if total_liquidity == 0 {
             mint_lp_asset(pool_id, Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
