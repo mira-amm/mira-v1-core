@@ -30,6 +30,7 @@ use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
 use sway_libs::reentrancy::reentrancy_guard;
 
+// 0,3%, 0,1%, 0,05%, 0,02% respectively, in basis points
 configurable {
     LP_FEE_VOLATILE: u64 = 30,
     LP_FEE_STABLE: u64 = 10,
