@@ -19,7 +19,7 @@ use std::{
 use standards::src20::SRC20;
 use utils::utils::{validate_pool_id, get_lp_asset, build_lp_name};
 use utils::src20_utils::get_symbol_and_decimals;
-use math::pool_math::{proportional_value, initial_liquidity, min};
+use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve};
 use interfaces::mira_amm::MiraAMM;
 use interfaces::data_structures::{
     Asset,
@@ -66,6 +66,17 @@ fn get_pool(pool_id: PoolId) -> PoolInfo {
 #[storage(read)]
 fn get_total_reserve(asset_id: AssetId) -> u64 {
     storage.total_reserves.get(asset_id).try_read().unwrap_or(0)
+}
+
+#[storage(write)]
+fn update_total_reserve(asset_id: AssetId) {
+    storage.total_reserves.insert(asset_id, this_balance(asset_id));
+}
+
+#[storage(write)]
+fn update_total_reserves(pool_id: PoolId) {
+    update_total_reserve(pool_id.0);
+    update_total_reserve(pool_id.1);
 }
 
 #[storage(read)]
@@ -241,8 +252,7 @@ impl MiraAMM for Contract {
         let added_assets = AssetPair::new(Asset::new(pool_id.0, amount_0), Asset::new(pool_id.1, amount_1));
         pool.reserves = pool.reserves + added_assets;
         storage.pools.insert(pool_id, pool);
-        storage.total_reserves.insert(pool_id.0, total_reserve_0 + added_assets.a.amount);
-        storage.total_reserves.insert(pool_id.1, total_reserve_1 + added_assets.b.amount);
+        update_total_reserves(pool_id);
 
         let minted = mint_lp_asset(pool_id, to, added_liquidity);
         log(MintEvent { pool_id, recipient: to, liquidity: minted, assets_in: added_assets });
@@ -258,10 +268,7 @@ impl MiraAMM for Contract {
         let total_liquidity = burn_lp_asset(pool_id, burned_liquidity);
         let removed_assets = transfer_out_assets(pool_id, total_liquidity, burned_liquidity, to);
 
-        let total_reserve_0 = get_total_reserve(pool_id.0);
-        let total_reserve_1 = get_total_reserve(pool_id.1);
-        storage.total_reserves.insert(pool_id.0, total_reserve_0 - removed_assets.a.amount);
-        storage.total_reserves.insert(pool_id.1, total_reserve_1 - removed_assets.b.amount);
+        update_total_reserves(pool_id);
 
         log(BurnEvent { pool_id, recipient: to, liquidity: burned_liquidity, assets_out: removed_assets });
         
@@ -299,10 +306,13 @@ impl MiraAMM for Contract {
         };
         require(amount_0_in > 0 || amount_1_in > 0, InputError::ZeroInputAmount);
 
-        let updated_balance_0 = this_balance(pool_id.0);
-        let updated_balance_1 = this_balance(pool_id.1);
-        // require(_k(updated_balance_0, updated_balance_1) >= _k(reserve_0, reserve_1), "K");
+        validate_curve(pool.is_stable, balance_0, balance_1, pool.reserves.a.amount, pool.reserves.b.amount, pool.decimals_a, pool.decimals_b);
         // TODO: Update all reserves
+        // pool.reserves = pool.reserves.a.amount + added_assets;
+        // storage.pools.insert(pool_id, pool);
+
+        update_total_reserves(pool_id);
+
         // log(SwapEvent{ pool_id, recipient: to, amount_0_in, amount_1_in, amount_0_out, amount_1_out });
     }
 }

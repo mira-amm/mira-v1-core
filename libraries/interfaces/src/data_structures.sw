@@ -1,5 +1,6 @@
 library;
 
+// TODO: add is_stable to pool id
 pub type PoolId = (AssetId, AssetId);
 
 /// Information for a particular asset.
