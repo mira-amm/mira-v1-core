@@ -25,7 +25,7 @@ use interfaces::data_structures::{
     Asset,
     PoolId,
     PoolInfo,
-    PoolInfoView,
+    PoolMetadata,
 };
 use interfaces::errors::{InputError, AmmError};
 use interfaces::events::{RegisterPoolEvent, SwapEvent, MintEvent, BurnEvent};
@@ -218,10 +218,10 @@ impl MiraAMM for Contract {
     }
 
     #[storage(read)]
-    fn pool_info(pool_id: PoolId) -> PoolInfoView {
+    fn pool_metadata(pool_id: PoolId) -> PoolMetadata {
         let pool = get_pool(pool_id);
         let liquidity = get_pool_liquidity(pool_id);
-        PoolInfoView::from_pool_and_liquidity(pool, liquidity)
+        PoolMetadata::from_pool_and_liquidity(pool, liquidity)
     }
 
     #[storage(read)]

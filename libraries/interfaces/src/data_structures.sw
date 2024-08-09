@@ -48,7 +48,7 @@ impl PoolInfo {
     }
 }
 
-pub struct PoolInfoView {
+pub struct PoolMetadata {
     pub reserve_0: u64,
     pub reserve_1: u64,
     pub liquidity: Asset,
@@ -56,7 +56,7 @@ pub struct PoolInfoView {
     pub decimals_1: u8,
 }
 
-impl PoolInfoView {
+impl PoolMetadata {
     pub fn from_pool_and_liquidity(
         pool: PoolInfo,
         liquidity: Asset,

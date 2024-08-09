@@ -5,7 +5,7 @@ use ::data_structures::{
     Asset,
     PoolId,
     PoolInfo,
-    PoolInfoView,
+    PoolMetadata,
 };
 
 
@@ -23,7 +23,7 @@ abi MiraAMM {
     );
 
     #[storage(read)]
-    fn pool_info(pool_id: PoolId) -> PoolInfoView;
+    fn pool_metadata(pool_id: PoolId) -> PoolMetadata;
 
     #[storage(read)]
     fn pools() -> Vec<PoolId>;
