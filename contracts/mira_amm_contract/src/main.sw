@@ -34,8 +34,6 @@ use interfaces::events::{RegisterPoolEvent, SwapEvent, MintEvent, BurnEvent};
 
 configurable {
     LIQUIDITY_MINER_FEE: u64 = 33, // 0,33%
-    MINIMUM_LIQUIDITY: u64 = 100,
-    LP_TOKEN_DECIMALS: u8 = 9,
 }
 
 storage {
@@ -51,16 +49,15 @@ storage {
     lp_name: StorageMap<AssetId, StorageString> = StorageMap {},
 }
 
+const MINIMUM_LIQUIDITY: u64 = 1000;
+const LP_TOKEN_DECIMALS: u8 = 9;
+
 #[storage(read)]
 fn get_pool(pool_id: PoolId) -> PoolInfo {
     validate_pool_id(pool_id);
-    match storage.pools.get(pool_id).try_read() {
-        Some(pool) => pool,
-        None => {
-            require(false, InputError::PoolDoesNotExist(pool_id));
-            revert(0)
-        },
-    }
+    let pool = storage.pools.get(pool_id).try_read();
+    require(pool.is_some(), InputError::PoolDoesNotExist(pool_id));
+    pool.unwrap()
 }
 
 #[storage(read)]
@@ -90,21 +87,14 @@ fn lp_asset_exists(asset: AssetId) -> bool {
 }
 
 #[storage(read, write)]
-fn initialize_pool(pool_id: PoolId, is_stable: bool, a_decimals: u8, b_decimals: u8, a_symbol: String, b_symbol: String) {
+fn initialize_pool(pool_id: PoolId, is_stable: bool, a_decimals: u8, b_decimals: u8, lp_name: String) {
     require(storage.pools.get(pool_id).try_read().is_none(), InputError::PoolAlreadyExists(pool_id));
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
-    let lp_name = build_lp_name(a_symbol, b_symbol);
-
     let pool_info = PoolInfo::new(pool_id, a_decimals, b_decimals, is_stable);
-
     storage.pools.insert(pool_id, pool_info);
     storage.pool_ids.push(pool_id);
     storage.lp_name.get(pool_lp_asset).write_slice(lp_name);
     storage.lp_total_supply.insert(pool_lp_asset, 0);
-
-    log(RegisterPoolEvent {
-        pool_id: pool_id,
-    });
 }
 
 #[storage(read, write)]
@@ -209,8 +199,13 @@ impl MiraAMM for Contract {
 
         let (a_symbol, a_decimals) = get_symbol_and_decimals(token_a_contract_id, token_a_id);
         let (b_symbol, b_decimals) = get_symbol_and_decimals(token_b_contract_id, token_b_id);
+        let lp_name = build_lp_name(a_symbol, b_symbol);
 
-        initialize_pool(pool_id, is_stable, a_decimals, b_decimals, a_symbol, b_symbol);
+        initialize_pool(pool_id, is_stable, a_decimals, b_decimals, lp_name);
+
+        log(RegisterPoolEvent {
+            pool_id,
+        });
     }
 
     #[storage(read)]
@@ -239,8 +234,8 @@ impl MiraAMM for Contract {
         let mut total_liquidity = get_pool_liquidity(pool_id);
 
         let added_liquidity: u64 = if total_liquidity == 0 {
-            initial_liquidity(amount_0, amount_1) // TODO:  - MINIMUM_LIQUIDITY
-            // _mint(Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
+            mint_lp_asset(pool_id, Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
+            initial_liquidity(amount_0, amount_1) - MINIMUM_LIQUIDITY
         } else {
             min(
                 proportional_value(amount_0, total_liquidity, pool.reserves.a.amount),
