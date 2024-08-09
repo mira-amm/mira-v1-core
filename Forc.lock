@@ -41,5 +41,6 @@ name = "utils"
 source = "member"
 dependencies = [
     "interfaces",
+    "standards",
     "std",
 ]
