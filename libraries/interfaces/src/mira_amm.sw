@@ -17,7 +17,7 @@ abi MiraAMM {
         token_1_contract_id: ContractId,
         token_1_sub_id: b256,
         is_stable: bool,
-    );
+    ) -> PoolId;
 
     #[storage(read)]
     fn pool_metadata(pool_id: PoolId) -> PoolMetadata;

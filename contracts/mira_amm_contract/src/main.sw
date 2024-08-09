@@ -233,7 +233,7 @@ impl MiraAMM for Contract {
         token_1_contract_id: ContractId,
         token_1_sub_id: b256,
         is_stable: bool,
-    ) {
+    ) -> PoolId {
         let token_0_id = AssetId::new(token_0_contract_id, token_0_sub_id);
         let token_1_id = AssetId::new(token_1_contract_id, token_1_sub_id);
         let pool_id: PoolId = (token_0_id, token_1_id, is_stable);
@@ -246,6 +246,7 @@ impl MiraAMM for Contract {
         initialize_pool(pool_id, decimals_0, decimals_1, lp_name);
 
         log(CreatePoolEvent { pool_id });
+        pool_id
     }
 
     #[storage(read)]
