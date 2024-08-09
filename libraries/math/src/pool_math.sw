@@ -4,6 +4,7 @@ use std::{math::*, primitive_conversions::u64::*};
 use interfaces::errors::AmmError;
 
 const ONE_E_18: u256 = 1_000_000_000_000_000_000;
+const BASIS_POINTS_DENOMINATOR: u256 = 10_000;
 
 pub fn proportional_value(numerator_1: u64, numerator_2: u64, denominator: u64) -> u64 {
     u64::try_from(numerator_1.as_u256() * numerator_2.as_u256() / denominator.as_u256()).unwrap()
@@ -12,6 +13,11 @@ pub fn proportional_value(numerator_1: u64, numerator_2: u64, denominator: u64) 
 pub fn initial_liquidity(deposit_0: u64, deposit_1: u64) -> u64 {
     let product = deposit_0.as_u256() * deposit_1.as_u256();
     u64::try_from(product.sqrt()).unwrap()
+}
+
+pub fn calculate_fee(amount: u64, fee: u64) -> u64 {
+    let fee = u64::try_from(amount.as_u256() * fee.as_u256() / BASIS_POINTS_DENOMINATOR).unwrap();
+    max(1, fee)
 }
 
 pub fn max(a: u64, b: u64) -> u64 {

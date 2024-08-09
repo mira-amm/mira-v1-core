@@ -19,7 +19,7 @@ use std::{
 use standards::src20::SRC20;
 use utils::utils::{validate_pool_id, get_lp_asset, build_lp_name};
 use utils::src20_utils::get_symbol_and_decimals;
-use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve};
+use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve, calculate_fee};
 use interfaces::mira_amm::MiraAMM;
 use interfaces::data_structures::{
     Asset,
@@ -31,7 +31,8 @@ use interfaces::errors::{InputError, AmmError};
 use interfaces::events::{CreatePoolEvent, SwapEvent, MintEvent, BurnEvent};
 
 configurable {
-    LIQUIDITY_MINER_FEE: u64 = 33, // 0,33%
+    LP_FEE_VOLATILE: u64 = 30, // 0,3%
+    LP_FEE_STABLE: u64 = 10, // 0,1%
 }
 
 storage {
@@ -151,7 +152,6 @@ fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64
     (balance, amount_in)
 }
 
-
 #[storage(read, write)]
 fn update_reserves(pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_out: u64, amount_1_out: u64) {
     let reserve_0 = pool.reserve_0 + amount_0_in - amount_0_out;
@@ -159,6 +159,10 @@ fn update_reserves(pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_
     let updated_pool = pool.copy_with_reserves(reserve_0, reserve_1);
     storage.pools.insert(pool.id, updated_pool);
     update_total_reserves(pool.id);
+}
+
+fn get_pool_fee(pool_id: PoolId) -> u64 {
+    if pool_id.2 { LP_FEE_STABLE } else { LP_FEE_VOLATILE }
 }
 
 impl SRC20 for Contract {
@@ -293,7 +297,10 @@ impl MiraAMM for Contract {
         let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
         require(asset_0_in > 0 || asset_1_in > 0, InputError::ZeroInputAmount);
 
-        validate_curve(pool_id.2, balance_0, balance_1, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
+        let lp_fee = get_pool_fee(pool_id);
+        let balance_0_adjusted = balance_0 - calculate_fee(asset_0_in, lp_fee);
+        let balance_1_adjusted = balance_1 - calculate_fee(asset_1_in, lp_fee);
+        validate_curve(pool_id.2, balance_0_adjusted, balance_1_adjusted, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
         update_reserves(pool, asset_0_in, asset_1_in, asset_0_out, asset_1_out);
 
         log(SwapEvent{ pool_id, recipient: to, asset_0_in, asset_1_in, asset_0_out, asset_1_out });
