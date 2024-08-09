@@ -277,7 +277,6 @@ impl MiraAMM for Contract {
         update_total_reserves(pool_id);
 
         log(BurnEvent { pool_id, recipient: to, liquidity: burned_liquidity, assets_out: removed_assets });
-        
         removed_assets
     }
 
@@ -301,12 +300,21 @@ impl MiraAMM for Contract {
         require(amount_0_in > 0 || amount_1_in > 0, InputError::ZeroInputAmount);
 
         validate_curve(pool.is_stable, balance_0, balance_1, pool.reserves.a.amount, pool.reserves.b.amount, pool.decimals_a, pool.decimals_b);
-        // TODO: Update all reserves
-        // pool.reserves = pool.reserves.a.amount + added_assets;
-        // storage.pools.insert(pool_id, pool);
 
+        let assets_in = AssetPair::new(
+            Asset::new(pool_id.0, amount_0_in),
+            Asset::new(pool_id.1, amount_1_in),
+        );
+        let assets_out = AssetPair::new(
+            Asset::new(pool_id.0, amount_0_out),
+            Asset::new(pool_id.1, amount_1_out),
+        );
+
+        // TODO: move reserve updates to a separate function
+        pool.reserves = pool.reserves + assets_in - assets_out;
+        storage.pools.insert(pool_id, pool);
         update_total_reserves(pool_id);
 
-        // log(SwapEvent{ pool_id, recipient: to, amount_0_in, amount_1_in, amount_0_out, amount_1_out });
+        log(SwapEvent{ pool_id, recipient: to, assets_in, assets_out });
     }
 }
