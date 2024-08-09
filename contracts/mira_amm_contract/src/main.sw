@@ -127,24 +127,6 @@ fn burn_lp_asset(pool_id: PoolId, burned_liquidity: Asset) -> u64 {
     lp_total_supply
 }
 
-
-#[storage(read, write)]
-fn transfer_out_assets(pool_id: PoolId, total_liquidity: u64, burned_liquidity: Asset, recepient: Identity) -> AssetPair {
-    let mut pool = get_pool(pool_id);
-    let removed_assets = AssetPair::new(
-        Asset::new(pool_id.0, proportional_value(burned_liquidity.amount, pool.reserves.a.amount, total_liquidity)), 
-        Asset::new(pool_id.1, proportional_value(burned_liquidity.amount, pool.reserves.b.amount, total_liquidity))
-    );
-
-    pool.reserves = pool.reserves - removed_assets;
-    storage.pools.insert(pool_id, pool);
-
-    transfer(recepient, removed_assets.a.id, removed_assets.a.amount);
-    transfer(recepient, removed_assets.b.id, removed_assets.b.amount);
-
-    removed_assets
-}
-
 #[storage(read)]
 fn get_pool_liquidity(pool_id: PoolId) -> u64 {
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
@@ -166,6 +148,22 @@ fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64
     let after_out = total_reserve - amount_out;
     let amount_in = if balance > after_out { balance - after_out } else { 0 };
     (balance, amount_in)
+}
+
+
+#[storage(read, write)]
+fn update_reserves(pool_id: PoolId, pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_out: u64, amount_1_out: u64) {
+    let assets_in = AssetPair::new(
+        Asset::new(pool_id.0, amount_0_in),
+        Asset::new(pool_id.1, amount_1_in),
+    );
+    let assets_out = AssetPair::new(
+        Asset::new(pool_id.0, amount_0_out),
+        Asset::new(pool_id.1, amount_1_out),
+    );
+    pool.reserves = pool.reserves + assets_in - assets_out;
+    storage.pools.insert(pool_id, pool);
+    update_total_reserves(pool_id);
 }
 
 impl SRC20 for Contract {
@@ -255,12 +253,9 @@ impl MiraAMM for Contract {
         };
         require(added_liquidity > 0, AmmError::NoLiquidityAdded);
 
-        let added_assets = AssetPair::new(Asset::new(pool_id.0, amount_0), Asset::new(pool_id.1, amount_1));
-        pool.reserves = pool.reserves + added_assets;
-        storage.pools.insert(pool_id, pool);
-        update_total_reserves(pool_id);
-
         let minted = mint_lp_asset(pool_id, to, added_liquidity);
+        update_reserves(pool_id, pool, amount_0, amount_1, 0, 0);
+
         log(MintEvent { pool_id, recipient: to, liquidity: minted, assets_in: added_assets });
         minted
     }
@@ -272,9 +267,15 @@ impl MiraAMM for Contract {
 
         let burned_liquidity = Asset::new(msg_asset_id(), msg_amount());
         let total_liquidity = burn_lp_asset(pool_id, burned_liquidity);
-        let removed_assets = transfer_out_assets(pool_id, total_liquidity, burned_liquidity, to);
+        
+        let mut pool = get_pool(pool_id);
+        let amount_0_out = proportional_value(burned_liquidity.amount, pool.reserves.a.amount, total_liquidity);
+        let amount_1_out = proportional_value(burned_liquidity.amount, pool.reserves.b.amount, total_liquidity);
 
-        update_total_reserves(pool_id);
+        transfer(recepient, pool_id.0, amount_0_out);
+        transfer(recepient, pool_id.1, amount_1_out);
+
+        update_reserves(pool_id, pool, 0, 0, amount_0_out, amount_1_out);
 
         log(BurnEvent { pool_id, recipient: to, liquidity: burned_liquidity, assets_out: removed_assets });
         removed_assets
@@ -300,20 +301,7 @@ impl MiraAMM for Contract {
         require(amount_0_in > 0 || amount_1_in > 0, InputError::ZeroInputAmount);
 
         validate_curve(pool.is_stable, balance_0, balance_1, pool.reserves.a.amount, pool.reserves.b.amount, pool.decimals_a, pool.decimals_b);
-
-        let assets_in = AssetPair::new(
-            Asset::new(pool_id.0, amount_0_in),
-            Asset::new(pool_id.1, amount_1_in),
-        );
-        let assets_out = AssetPair::new(
-            Asset::new(pool_id.0, amount_0_out),
-            Asset::new(pool_id.1, amount_1_out),
-        );
-
-        // TODO: move reserve updates to a separate function
-        pool.reserves = pool.reserves + assets_in - assets_out;
-        storage.pools.insert(pool_id, pool);
-        update_total_reserves(pool_id);
+        update_reserves(pool_id, pool, amount_0_in, amount_1_in, amount_0_out, amount_1_out);
 
         log(SwapEvent{ pool_id, recipient: to, assets_in, assets_out });
     }
