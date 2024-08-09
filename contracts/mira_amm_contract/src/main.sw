@@ -19,7 +19,7 @@ use std::{
 use standards::src20::SRC20;
 use utils::utils::{validate_pool_id, get_lp_asset, build_lp_name};
 use utils::src20_utils::get_symbol_and_decimals;
-use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve};
+use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve, calculate_fee};
 use interfaces::mira_amm::MiraAMM;
 use interfaces::data_structures::{
     Asset,
@@ -31,12 +31,17 @@ use interfaces::errors::{InputError, AmmError};
 use interfaces::events::{CreatePoolEvent, SwapEvent, MintEvent, BurnEvent};
 
 configurable {
-    LIQUIDITY_MINER_FEE: u64 = 33, // 0,33%
+    LP_FEE_VOLATILE: u64 = 30, // 0,3%
+    LP_FEE_STABLE: u64 = 10, // 0,1%
+    PROTOCOL_FEE_VOLATILE: u64 = 5, // 0,05%
+    PROTOCOL_FEE_STABLE: u64 = 2, // 0,02%
+    PROTOCOL_FEES_COLLECTOR: Identity = Identity::Address(Address::from(ZERO_B256)),
 }
 
 storage {
     /// Pools storage
     pools: StorageMap<PoolId, PoolInfo> = StorageMap {},
+    /// Vector of all created pool ids
     pool_ids: StorageVec<PoolId> = StorageVec {},
     /// Total reserves of specific assets across all pools
     total_reserves: StorageMap<AssetId, u64> = StorageMap {},
@@ -151,7 +156,6 @@ fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64
     (balance, amount_in)
 }
 
-
 #[storage(read, write)]
 fn update_reserves(pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_out: u64, amount_1_out: u64) {
     let reserve_0 = pool.reserve_0 + amount_0_in - amount_0_out;
@@ -159,6 +163,35 @@ fn update_reserves(pool: PoolInfo, amount_0_in: u64, amount_1_in: u64, amount_0_
     let updated_pool = pool.copy_with_reserves(reserve_0, reserve_1);
     storage.pools.insert(pool.id, updated_pool);
     update_total_reserves(pool.id);
+}
+
+fn transfer_assets(pool_id: PoolId, to: Identity, asset_0_out: u64, asset_1_out: u64) {
+    if (asset_0_out > 0) {
+        transfer(to, pool_id.0, asset_0_out);
+    }
+    if (asset_1_out > 0) {
+        transfer(to, pool_id.1, asset_1_out);
+    }
+}
+
+fn is_stable(pool_id: PoolId) -> bool {
+    pool_id.2
+}
+
+fn get_lp_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
+    if is_stable(pool_id) { 
+        (calculate_fee(amount_0, LP_FEE_STABLE), calculate_fee(amount_1, LP_FEE_STABLE))
+    } else { 
+        (calculate_fee(amount_0, LP_FEE_VOLATILE), calculate_fee(amount_1, LP_FEE_VOLATILE)) 
+    }
+}
+
+fn get_protocol_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
+    if is_stable(pool_id) { 
+        (calculate_fee(amount_0, PROTOCOL_FEE_STABLE), calculate_fee(amount_1, PROTOCOL_FEE_STABLE))
+    } else { 
+        (calculate_fee(amount_0, PROTOCOL_FEE_VOLATILE), calculate_fee(amount_1, PROTOCOL_FEE_VOLATILE)) 
+    }
 }
 
 impl SRC20 for Contract {
@@ -281,20 +314,25 @@ impl MiraAMM for Contract {
         require(asset_0_out > 0 || asset_1_out > 0, InputError::ZeroOutputAmount);
         require(asset_0_out < pool.reserve_0 && asset_1_out < pool.reserve_1, AmmError::InsufficientLiquidity);
         // Optimistically transfer assets
-        if (asset_0_out > 0) {
-            transfer(to, pool_id.0, asset_0_out);
-        }
-        if (asset_1_out > 0) {
-            transfer(to, pool_id.1, asset_1_out);
-        }
+        transfer_assets(pool_id, to, asset_0_out, asset_1_out);
+
         // TODO: flash loans logic
 
         let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out);
         let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
         require(asset_0_in > 0 || asset_1_in > 0, InputError::ZeroInputAmount);
-
-        validate_curve(pool_id.2, balance_0, balance_1, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
-        update_reserves(pool, asset_0_in, asset_1_in, asset_0_out, asset_1_out);
+        
+        let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
+        let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
+        transfer_assets(pool_id, PROTOCOL_FEES_COLLECTOR, protocol_fee_0, protocol_fee_1);
+        
+        let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
+        let asset_1_in_adjusted = asset_1_in - protocol_fee_1;
+        let balance_0_adjusted = balance_0 - lp_fee_0 - protocol_fee_0;
+        let balance_1_adjusted = balance_1 - lp_fee_1 - protocol_fee_1;
+        
+        validate_curve(is_stable(pool_id), balance_0_adjusted, balance_1_adjusted, pool.reserve_0, pool.reserve_1, pool.decimals_0, pool.decimals_1);
+        update_reserves(pool, asset_0_in_adjusted, asset_1_in_adjusted, asset_0_out, asset_1_out);
 
         log(SwapEvent{ pool_id, recipient: to, asset_0_in, asset_1_in, asset_0_out, asset_1_out });
     }
