@@ -9,9 +9,6 @@ use ::data_structures::{
 };
 
 
-// TODO: add pause?
-// TODO: docs
-// TODO: add fee management
 abi MiraAMM {
     #[storage(read, write)]
     fn create_pool(
