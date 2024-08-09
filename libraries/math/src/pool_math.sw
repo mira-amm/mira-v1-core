@@ -2,7 +2,7 @@ library;
 
 use std::u128::U128;
 use std::{math::*, primitive_conversions::u64::*};
-use interfaces::errors::TransactionError;
+use interfaces::errors::AmmError;
 
 const ONE_E_9: u64 = 1_000_000_000;
 const PRECISION: u64 = 1_000_000_000;
@@ -62,7 +62,7 @@ pub fn maximum_input_for_exact_output(
     output_reserve: u64,
     liquidity_miner_fee: u64,
 ) -> u64 {
-    require(input_reserve > 0 && output_reserve > 0, TransactionError::InsufficientReserves);
+    require(input_reserve > 0 && output_reserve > 0, AmmError::InsufficientLiquidity);
     let numerator = U128::from((0, input_reserve)) * U128::from((0, output_amount));
     let denominator = U128::from((
         0,
@@ -103,7 +103,7 @@ pub fn minimum_output_given_exact_input(
     output_reserve: u64,
     liquidity_miner_fee: u64,
 ) -> u64 {
-    require(input_reserve > 0 && output_reserve > 0, TransactionError::InsufficientReserves);
+    require(input_reserve > 0 && output_reserve > 0, AmmError::InsufficientLiquidity);
     // TODO: just call `subtract_fee_from_amount`?
     let fee_multiplier = BASIS_POINTS - liquidity_miner_fee;
     let input_amount_with_fee = input_amount.as_u256() * fee_multiplier.as_u256();
@@ -312,7 +312,16 @@ fn _get_y(x0: u64, xy: u64, y: u64) -> u64 {
 
 /// Returns the maximum of two provided values
 pub fn max(a: u64, b: u64) -> u64 {
-    if (a > b) {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
+/// Returns the minimum of two provided values
+pub fn min(a: u64, b: u64) -> u64 {
+    if a < b {
         a
     } else {
         b

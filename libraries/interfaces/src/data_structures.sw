@@ -140,6 +140,7 @@ pub struct LiquidityParameters {
 pub struct PoolInfo {
     /// The unique identifiers and reserve amounts of the assets that make up the liquidity pool of the exchange contract.
     pub reserves: AssetPair,
+    // TODO: do we need decimals?
     pub decimals_a: u8,
     pub decimals_b: u8,
     pub is_stable: bool,
@@ -166,7 +167,7 @@ pub struct PoolInfoView {
     /// The unique identifiers and reserve amounts of the assets that make up the liquidity pool of the exchange contract.
     pub reserves: AssetPair,
     /// The amount of liquidity pool asset supply in the exchange contract.
-    pub liquidity: u64,
+    pub liquidity: u64, // TODO: make it Asset
     pub decimals_a: u8,
     pub decimals_b: u8,
     pub is_stable: bool,

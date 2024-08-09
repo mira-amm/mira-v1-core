@@ -7,9 +7,13 @@ use ::data_structures::{
     PoolInfo,
     RemoveLiquidityInfo,
     PoolInfoView,
+    AssetPair,
 };
 
+
+// TODO: add pause?
 // TODO: docs
+// TODO: add fee management
 abi MiraAMM {
     #[storage(read, write)]
     fn add_pool(
@@ -23,43 +27,17 @@ abi MiraAMM {
     #[storage(read)]
     fn pool_info(pool_id: PoolId) -> PoolInfoView;
 
-    // TODO: be consistent and return more info, like in `remove_liquidity`
-    #[storage(read, write)]
-    fn add_liquidity(
-        pool_id: PoolId,
-        desired_liquidity: u64,
-        deadline: u32,
-    ) -> Asset;
-
-    // TODO: return some info about the pool
-    #[payable, storage(read, write)]
-    fn deposit(pool_id: PoolId);
-
-    #[payable, storage(read, write)]
-    fn remove_liquidity(
-        pool_id: PoolId,
-        min_asset_a: u64,
-        min_asset_b: u64,
-        deadline: u32,
-    ) -> RemoveLiquidityInfo;
-
-    // TODO: return some info about the pool
-    #[storage(read, write)]
-    fn withdraw(pool_id: PoolId, asset: Asset);
-
-    // TODO: move exact_input and exact_output to the router
-    // TODO: return some info about the pool
-    #[payable, storage(read, write)]
-    fn swap_exact_input(
-        pool_id: PoolId,
-        min_output: u64,
-        deadline: u32,
-    ) -> u64;
-
-    // TODO: return some info about the pool
-    #[payable, storage(read, write)]
-    fn swap_exact_output(pool_id: PoolId, output: u64, deadline: u32) -> u64;
-
     #[storage(read)]
-    fn balance(pool_id: PoolId, asset_id: AssetId) -> u64;
+    fn pools() -> Vec<PoolId>;
+
+    #[storage(read, write)]
+    fn mint(pool_id: PoolId, to: Identity) -> Asset;
+
+    #[payable]
+    #[storage(read, write)]
+    fn burn(pool_id: PoolId, to: Identity) -> AssetPair;
+
+    #[payable]
+    #[storage(read, write)]
+    fn swap(pool_id: PoolId, amount_0_out: u64, amount_1_out: u64, to: Identity);
 }
