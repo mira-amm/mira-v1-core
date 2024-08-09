@@ -2,7 +2,7 @@ library;
 
 use interfaces::data_structures::{Asset, PoolId};
 use interfaces::errors::InputError;
-use std::{hash::*, string::String, bytes::Bytes};
+use std::{bytes::Bytes, hash::*, string::String};
 
 /// Validates that the provided pool id is correct, i.e.:
 ///  - has two distinct assets
@@ -11,7 +11,10 @@ pub fn validate_pool_id(pool_id: PoolId) {
     require(pool_id.0 != pool_id.1, InputError::IdenticalAssets);
     let pool_id_0_b256: b256 = pool_id.0.into();
     let pool_id_1_b256: b256 = pool_id.1.into();
-    require(pool_id_0_b256 < pool_id_1_b256, InputError::UnsortedAssetPair);
+    require(
+        pool_id_0_b256 < pool_id_1_b256,
+        InputError::UnsortedAssetPair,
+    );
 }
 
 /// Builds and returns an LP sub id and asset id for the provided pool id

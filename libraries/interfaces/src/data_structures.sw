@@ -23,11 +23,7 @@ pub struct PoolInfo {
 }
 
 impl PoolInfo {
-    pub fn new(
-        id: PoolId,
-        decimals_0: u8,
-        decimals_1: u8,
-    ) -> Self {
+    pub fn new(id: PoolId, decimals_0: u8, decimals_1: u8) -> Self {
         Self {
             id,
             reserve_0: 0,
@@ -57,10 +53,7 @@ pub struct PoolMetadata {
 }
 
 impl PoolMetadata {
-    pub fn from_pool_and_liquidity(
-        pool: PoolInfo,
-        liquidity: Asset,
-    ) -> Self {
+    pub fn from_pool_and_liquidity(pool: PoolInfo, liquidity: Asset) -> Self {
         Self {
             reserve_0: pool.reserve_0,
             reserve_1: pool.reserve_1,
