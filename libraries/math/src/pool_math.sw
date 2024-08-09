@@ -3,11 +3,10 @@ library;
 use std::{math::*, primitive_conversions::u64::*};
 use interfaces::errors::AmmError;
 
-const BASIS_POINTS: u64 = 10_000;
 const ONE_E_18: u256 = 1_000_000_000_000_000_000;
 
-pub fn proportional_value(b: u64, c: u64, a: u64) -> u64 {
-    u64::try_from(b.as_u256() * c.as_u256() / a.as_u256()).unwrap()
+pub fn proportional_value(numerator_1: u64, numerator_2: u64, denominator: u64) -> u64 {
+    u64::try_from(numerator_1.as_u256() * numerator_2.as_u256() / denominator.as_u256()).unwrap()
 }
 
 pub fn initial_liquidity(deposit_0: u64, deposit_1: u64) -> u64 {
@@ -16,19 +15,11 @@ pub fn initial_liquidity(deposit_0: u64, deposit_1: u64) -> u64 {
 }
 
 pub fn max(a: u64, b: u64) -> u64 {
-    if a > b {
-        a
-    } else {
-        b
-    }
+    if a > b { a } else { b }
 }
 
 pub fn min(a: u64, b: u64) -> u64 {
-    if a < b {
-        a
-    } else {
-        b
-    }
+    if a < b { a } else { b }
 }
 
 fn _k(is_stable: bool, x: u64, y: u64, decimals_x: u8, decimals_y: u8) -> u256 {

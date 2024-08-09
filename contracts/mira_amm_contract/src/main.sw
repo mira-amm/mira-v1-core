@@ -28,7 +28,7 @@ use interfaces::data_structures::{
     PoolMetadata,
 };
 use interfaces::errors::{InputError, AmmError};
-use interfaces::events::{RegisterPoolEvent, SwapEvent, MintEvent, BurnEvent};
+use interfaces::events::{CreatePoolEvent, SwapEvent, MintEvent, BurnEvent};
 
 configurable {
     LIQUIDITY_MINER_FEE: u64 = 33, // 0,33%
@@ -212,9 +212,7 @@ impl MiraAMM for Contract {
 
         initialize_pool(pool_id, decimals_0, decimals_1, lp_name);
 
-        log(RegisterPoolEvent {
-            pool_id,
-        });
+        log(CreatePoolEvent { pool_id });
     }
 
     #[storage(read)]

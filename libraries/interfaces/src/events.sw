@@ -2,7 +2,7 @@ library;
 
 use ::data_structures::{Asset, PoolId};
 
-pub struct RegisterPoolEvent {
+pub struct CreatePoolEvent {
     pub pool_id: PoolId,
 }
 
