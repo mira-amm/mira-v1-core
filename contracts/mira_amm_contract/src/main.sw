@@ -7,6 +7,7 @@ use std::{
         mint_to,
         transfer,
     },
+    bytes::Bytes,
     call_frames::msg_asset_id,
     constants::ZERO_B256,
     context::{this_balance, msg_amount},
@@ -20,7 +21,7 @@ use standards::src20::SRC20;
 use utils::utils::{validate_pool_id, get_lp_asset, build_lp_name};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{proportional_value, initial_liquidity, min, validate_curve, calculate_fee};
-use interfaces::mira_amm::MiraAMM;
+use interfaces::{mira_amm::MiraAMM, callee::IBaseCallee};
 use interfaces::data_structures::{
     Asset,
     PoolId,
@@ -29,6 +30,7 @@ use interfaces::data_structures::{
 };
 use interfaces::errors::{InputError, AmmError};
 use interfaces::events::{CreatePoolEvent, SwapEvent, MintEvent, BurnEvent};
+use sway_libs::reentrancy::reentrancy_guard;
 
 configurable {
     LP_FEE_VOLATILE: u64 = 30, // 0,3%
@@ -233,7 +235,8 @@ impl MiraAMM for Contract {
         token_1_contract_id: ContractId,
         token_1_sub_id: b256,
         is_stable: bool,
-    ) {
+    ) -> PoolId {
+        reentrancy_guard();
         let token_0_id = AssetId::new(token_0_contract_id, token_0_sub_id);
         let token_1_id = AssetId::new(token_1_contract_id, token_1_sub_id);
         let pool_id: PoolId = (token_0_id, token_1_id, is_stable);
@@ -246,6 +249,7 @@ impl MiraAMM for Contract {
         initialize_pool(pool_id, decimals_0, decimals_1, lp_name);
 
         log(CreatePoolEvent { pool_id });
+        pool_id
     }
 
     #[storage(read)]
@@ -262,6 +266,7 @@ impl MiraAMM for Contract {
 
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
+        reentrancy_guard();
         let mut pool = get_pool(pool_id);
         let asset_0_in = get_amount_in(pool_id.0);
         let asset_1_in = get_amount_in(pool_id.1);
@@ -269,7 +274,7 @@ impl MiraAMM for Contract {
         let total_liquidity = get_pool_liquidity(pool_id).amount;
 
         let added_liquidity: u64 = if total_liquidity == 0 {
-            mint_lp_asset(pool_id, Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
+            let _ = mint_lp_asset(pool_id, Identity::Address(Address::from(ZERO_B256)), MINIMUM_LIQUIDITY);
             initial_liquidity(asset_0_in, asset_1_in) - MINIMUM_LIQUIDITY
         } else {
             min(
@@ -289,6 +294,7 @@ impl MiraAMM for Contract {
     #[payable]
     #[storage(read, write)]
     fn burn(pool_id: PoolId, to: Identity) -> (u64, u64) {
+        reentrancy_guard();
         validate_pool_id(pool_id);
 
         let burned_liquidity = Asset::new(msg_asset_id(), msg_amount());
@@ -309,14 +315,18 @@ impl MiraAMM for Contract {
 
     #[payable]
     #[storage(read, write)]
-    fn swap(pool_id: PoolId, asset_0_out: u64, asset_1_out: u64, to: Identity) {
+    fn swap(pool_id: PoolId, asset_0_out: u64, asset_1_out: u64, to: Identity, data: Bytes) {
+        reentrancy_guard();
         let mut pool = get_pool(pool_id);
         require(asset_0_out > 0 || asset_1_out > 0, InputError::ZeroOutputAmount);
         require(asset_0_out < pool.reserve_0 && asset_1_out < pool.reserve_1, AmmError::InsufficientLiquidity);
         // Optimistically transfer assets
         transfer_assets(pool_id, to, asset_0_out, asset_1_out);
 
-        // TODO: flash loans logic
+        if data.len() > 0 {
+            abi(IBaseCallee, to.as_contract_id().unwrap().into())
+                .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, data);
+        }
 
         let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out);
         let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
