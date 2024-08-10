@@ -28,6 +28,17 @@ pub fn min(a: u64, b: u64) -> u64 {
     if a < b { a } else { b }
 }
 
+// TODO: find a standard library function for that
+fn pow_decimals(decimals: u8) -> u256 {
+    let mut res: u256 = 1;
+    let mut i: u8 = 0;
+    while i < decimals {
+        res *= 10;
+        i += 1;
+    }
+    res
+}
+
 fn _k(
     is_stable: bool,
     x: u64,
@@ -36,8 +47,8 @@ fn _k(
     decimals_y: u8,
 ) -> u256 {
     if (is_stable) {
-        let _x: u256 = x.as_u256() * ONE_E_18 / decimals_x.as_u256();
-        let _y: u256 = y.as_u256() * ONE_E_18 / decimals_y.as_u256();
+        let _x: u256 = x.as_u256() * ONE_E_18 / pow_decimals(decimals_x);
+        let _y: u256 = y.as_u256() * ONE_E_18 / pow_decimals(decimals_y);
         let _a: u256 = (_x * _y) / ONE_E_18;
         let _b: u256 = ((_x * _x) / ONE_E_18 + (_y * _y) / ONE_E_18);
         return _a * _b / ONE_E_18; // x3y+y3x >= k

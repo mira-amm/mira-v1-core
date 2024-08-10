@@ -99,8 +99,8 @@ fn lp_asset_exists(asset: AssetId) -> bool {
 #[storage(read, write)]
 fn initialize_pool(
     pool_id: PoolId,
-    a_decimals: u8,
-    b_decimals: u8,
+    decimals_0: u8,
+    decimals_1: u8,
     lp_name: String,
 ) {
     require(
@@ -109,7 +109,7 @@ fn initialize_pool(
         InputError::PoolAlreadyExists(pool_id),
     );
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
-    let pool_info = PoolInfo::new(pool_id, a_decimals, b_decimals);
+    let pool_info = PoolInfo::new(pool_id, decimals_0, decimals_1);
     storage.pools.insert(pool_id, pool_info);
     storage.pool_ids.push(pool_id);
 
