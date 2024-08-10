@@ -56,9 +56,14 @@ const MINIMUM_LIQUIDITY: u64 = 1000;
 const LP_TOKEN_DECIMALS: u8 = 9;
 
 #[storage(read)]
-fn get_pool(pool_id: PoolId) -> PoolInfo {
+fn get_pool_option(pool_id: PoolId) -> Option<PoolInfo> {
     validate_pool_id(pool_id);
-    let pool = storage.pools.get(pool_id).try_read();
+    storage.pools.get(pool_id).try_read()
+}
+
+#[storage(read)]
+fn get_pool(pool_id: PoolId) -> PoolInfo {
+    let pool = get_pool_option(pool_id);
     require(pool.is_some(), InputError::PoolDoesNotExist(pool_id));
     pool.unwrap()
 }
@@ -99,10 +104,7 @@ fn initialize_pool(
     lp_name: String,
 ) {
     require(
-        storage
-            .pools
-            .get(pool_id)
-            .try_read()
+        get_pool_option(pool_id)
             .is_none(),
         InputError::PoolAlreadyExists(pool_id),
     );
@@ -288,7 +290,6 @@ impl MiraAMM for Contract {
         let token_0_id = AssetId::new(token_0_contract_id, token_0_sub_id);
         let token_1_id = AssetId::new(token_1_contract_id, token_1_sub_id);
         let pool_id: PoolId = (token_0_id, token_1_id, is_stable);
-        validate_pool_id(pool_id);
 
         let (symbol_0, decimals_0) = get_symbol_and_decimals(token_0_contract_id, token_0_id);
         let (symbol_1, decimals_1) = get_symbol_and_decimals(token_1_contract_id, token_1_id);
@@ -301,10 +302,11 @@ impl MiraAMM for Contract {
     }
 
     #[storage(read)]
-    fn pool_metadata(pool_id: PoolId) -> PoolMetadata {
-        let pool = get_pool(pool_id);
-        let liquidity = get_pool_liquidity(pool_id);
-        PoolMetadata::from_pool_and_liquidity(pool, liquidity)
+    fn pool_metadata(pool_id: PoolId) -> Option<PoolMetadata> {
+        match get_pool_option(pool_id) {
+            Some(pool) => Some(PoolMetadata::from_pool_and_liquidity(pool, get_pool_liquidity(pool_id))),
+            None => None,
+        }
     }
 
     #[storage(read)]

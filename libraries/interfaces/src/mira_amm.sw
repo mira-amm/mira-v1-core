@@ -14,7 +14,7 @@ abi MiraAMM {
     ) -> PoolId;
 
     #[storage(read)]
-    fn pool_metadata(pool_id: PoolId) -> PoolMetadata;
+    fn pool_metadata(pool_id: PoolId) -> Option<PoolMetadata>;
 
     #[storage(read)]
     fn pools() -> Vec<PoolId>;
