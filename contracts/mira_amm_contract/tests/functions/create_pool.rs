@@ -1,6 +1,6 @@
 mod success {
 
-    use test_harness::interface::amm::{create_pool, pool_metadata};
+    use test_harness::interface::amm::{create_pool, pool_metadata, pools};
 
     use crate::utils::setup;
 
@@ -31,8 +31,13 @@ mod success {
         assert_eq!(pool_id.1, token_b_id);
         assert_eq!(pool_id.2, false);
 
-        let pool_metadata = pool_metadata(&amm, pool_id).await.value.unwrap();
+        let pools = pools(&amm).await.value;
+        assert_eq!(pools.len(), 1);
 
+        let pool_metadata_request = pool_metadata(&amm, pool_id).await;
+        assert_ne!(pool_metadata_request.value, None);
+
+        let pool_metadata = pool_metadata_request.value.unwrap();
         assert_eq!(pool_metadata.reserve_0, 0);
         assert_eq!(pool_metadata.reserve_1, 0);
         assert_eq!(pool_metadata.decimals_0, 9);
@@ -66,8 +71,13 @@ mod success {
         assert_eq!(pool_id.1, token_b_id);
         assert_eq!(pool_id.2, true);
 
-        let pool_metadata = pool_metadata(&amm, pool_id).await.value.unwrap();
+        let pools = pools(&amm).await.value;
+        assert_eq!(pools.len(), 1);
 
+        let pool_metadata_request = pool_metadata(&amm, pool_id).await;
+        assert_ne!(pool_metadata_request.value, None);
+
+        let pool_metadata = pool_metadata_request.value.unwrap();
         assert_eq!(pool_metadata.reserve_0, 0);
         assert_eq!(pool_metadata.reserve_1, 0);
         assert_eq!(pool_metadata.decimals_0, 9);
