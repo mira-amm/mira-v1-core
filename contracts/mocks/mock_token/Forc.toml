@@ -1,0 +1,9 @@
+[project]
+authors = ["Mira DEX"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "mock_token"
+
+[dependencies]
+standards = { workspace = true }
+sway_libs = { workspace = true }
