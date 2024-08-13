@@ -25,9 +25,6 @@ pub async fn setup() -> (
     let amm = deploy_amm(&wallet).await;
     let (token_contract_id, token_contract) = deploy_mock_token_contract(&wallet).await;
 
-    // setup two asset pairs that will be used in tests
-    // let asset_pairs = vec![(asset_ids[0], asset_ids[1]), (asset_ids[1], asset_ids[2])];
-
     let token_a_id =
         add_token(&token_contract, "TOKEN_A".to_string(), "TKA".to_string(), 9).await.value;
     let token_b_id =
