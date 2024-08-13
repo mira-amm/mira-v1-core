@@ -333,7 +333,12 @@ impl MiraAMM for Contract {
                 Identity::Address(Address::from(ZERO_B256)),
                 MINIMUM_LIQUIDITY,
             );
-            initial_liquidity(asset_0_in, asset_1_in) - MINIMUM_LIQUIDITY
+            let init_liquidity = initial_liquidity(asset_0_in, asset_1_in);
+            require(
+                init_liquidity > MINIMUM_LIQUIDITY,
+                AmmError::InsufficientLiquidity,
+            );
+            init_liquidity - MINIMUM_LIQUIDITY
         } else {
             min(
                 proportional_value(asset_0_in, total_liquidity, pool.reserve_0),
