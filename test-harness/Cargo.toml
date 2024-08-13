@@ -6,5 +6,3 @@ edition = "2021"
 [dependencies]
 tokio = { workspace = true }
 fuels = { workspace = true }
-anyhow = { workspace = true }
-rand = { workspace = true }

@@ -10,5 +10,3 @@ members = ["./contracts/mira_amm_contract", "./test-harness"]
 [workspace.dependencies]
 fuels = { version = "0.62.0", features = ["fuel-core-lib"] }
 tokio = { version = "1.12", features = ["rt", "macros"] }
-anyhow = "1.0.86"
-rand = "0.8.5"
