@@ -336,7 +336,7 @@ impl MiraAMM for Contract {
             let init_liquidity = initial_liquidity(asset_0_in, asset_1_in);
             require(
                 init_liquidity > MINIMUM_LIQUIDITY,
-                AmmError::InsufficientLiquidity,
+                AmmError::CannotAddLessThanMinimumLiquidity,
             );
             init_liquidity - MINIMUM_LIQUIDITY
         } else {
