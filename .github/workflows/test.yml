@@ -17,5 +17,5 @@ jobs:
       - name: Run sway tests
         run: forc test
 
-#      - name: Run rust tests
-#        run: cargo test
+      - name: Run rust tests
+        run: cargo test
