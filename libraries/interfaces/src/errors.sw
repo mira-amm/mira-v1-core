@@ -28,6 +28,8 @@ pub enum AmmError {
     InsufficientLiquidity: (),
     /// No liquidity added.
     NoLiquidityAdded: (),
+    /// The provided amount is less than the minimum liquidity.
+    CannotAddLessThanMinimumLiquidity: (),
     /// Curve invariant violation.
     CurveInvariantViolation: (u256, u256),
 }
