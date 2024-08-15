@@ -16,12 +16,13 @@ pub fn initial_liquidity(deposit_0: u64, deposit_1: u64) -> u64 {
 }
 
 pub fn calculate_fee(amount: u64, fee: u64) -> u64 {
-    let fee = u64::try_from(amount.as_u256() * fee.as_u256() / BASIS_POINTS_DENOMINATOR).unwrap();
-    max(1, fee)
-}
-
-pub fn max(a: u64, b: u64) -> u64 {
-    if a > b { a } else { b }
+    let nominator = amount.as_u256() * fee.as_u256();
+    let fee = u64::try_from(nominator / BASIS_POINTS_DENOMINATOR).unwrap();
+    if nominator % BASIS_POINTS_DENOMINATOR != 0 {
+        fee + 1
+    } else {
+        fee
+    }
 }
 
 pub fn min(a: u64, b: u64) -> u64 {
@@ -113,7 +114,7 @@ fn test_calculate_fee() {
     assert_eq(calculate_fee(10000, 1), 1);
     assert_eq(calculate_fee(20000, 1), 2);
     assert_eq(calculate_fee(20000, 10), 20);
-    assert_eq(calculate_fee(20001, 10), 20); // TODO: should be 21?
+    assert_eq(calculate_fee(20001, 10), 21);
     assert_eq(calculate_fee(100, 10000), 100);
     assert_eq(calculate_fee(u64::max(), 10000), u64::max());
 }
@@ -121,14 +122,6 @@ fn test_calculate_fee() {
 #[test(should_revert)]
 fn test_revert_calculate_fee_on_u64_overflow() {
     let _ = calculate_fee(u64::max(), u64::max());
-}
-
-#[test]
-fn test_max() {
-    assert_eq(max(1, 2), 2);
-    assert_eq(max(1, 1), 1);
-    assert_eq(max(u64::max(), u64::max()), u64::max());
-    assert_eq(max(u64::max(), 0), u64::max());
 }
 
 #[test]
