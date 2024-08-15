@@ -20,7 +20,7 @@ use std::{
     string::String,
 };
 use standards::src20::SRC20;
-use utils::utils::{build_lp_name, get_lp_asset, validate_pool_id};
+use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
 use interfaces::{callee::IBaseCallee, mira_amm::MiraAMM};
@@ -92,7 +92,7 @@ fn get_lp_total_supply(asset_id: AssetId) -> Option<u64> {
 
 #[storage(read)]
 fn lp_asset_exists(asset: AssetId) -> bool {
-    storage.lp_name.get(asset).try_read().is_some()
+    get_lp_total_supply(asset).is_some()
 }
 
 #[storage(read, write)]
@@ -108,15 +108,15 @@ fn initialize_pool(
         InputError::PoolAlreadyExists(pool_id),
     );
     let (_, pool_lp_asset) = get_lp_asset(pool_id);
+    require(
+        !lp_asset_exists(pool_lp_asset),
+        InputError::LPTokenHashCollision,
+    );
+
     let pool_info = PoolInfo::new(pool_id, decimals_0, decimals_1);
     storage.pools.insert(pool_id, pool_info);
     storage.pool_ids.push(pool_id);
 
-    require(
-        get_lp_total_supply(pool_lp_asset)
-            .is_none(),
-        InputError::LPTokenHashCollision,
-    );
     storage.lp_name.get(pool_lp_asset).write_slice(lp_name);
     storage.lp_total_supply.insert(pool_lp_asset, 0);
 }
@@ -216,33 +216,22 @@ fn transfer_assets(
     }
 }
 
-fn is_stable(pool_id: PoolId) -> bool {
-    pool_id.2
-}
-
 fn get_lp_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
-    if is_stable(pool_id) {
-        (calculate_fee(amount_0, LP_FEE_STABLE), calculate_fee(amount_1, LP_FEE_STABLE))
+    let fee = if is_stable(pool_id) {
+        LP_FEE_STABLE
     } else {
-        (
-            calculate_fee(amount_0, LP_FEE_VOLATILE),
-            calculate_fee(amount_1, LP_FEE_VOLATILE),
-        )
-    }
+        LP_FEE_VOLATILE
+    };
+    (calculate_fee(amount_0, fee), calculate_fee(amount_1, fee))
 }
 
 fn get_protocol_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
-    if is_stable(pool_id) {
-        (
-            calculate_fee(amount_0, PROTOCOL_FEE_STABLE),
-            calculate_fee(amount_1, PROTOCOL_FEE_STABLE),
-        )
+    let fee = if is_stable(pool_id) {
+        PROTOCOL_FEE_STABLE
     } else {
-        (
-            calculate_fee(amount_0, PROTOCOL_FEE_VOLATILE),
-            calculate_fee(amount_1, PROTOCOL_FEE_VOLATILE),
-        )
-    }
+        PROTOCOL_FEE_VOLATILE
+    };
+    (calculate_fee(amount_0, fee), calculate_fee(amount_1, fee))
 }
 
 impl SRC20 for Contract {

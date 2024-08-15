@@ -4,6 +4,10 @@ use interfaces::data_structures::{Asset, PoolId};
 use interfaces::errors::InputError;
 use std::{bytes::Bytes, hash::{Hash, sha256}, string::String};
 
+pub fn is_stable(pool_id: PoolId) -> bool {
+    pool_id.2
+}
+
 /// Validates that the provided pool id is correct, i.e.:
 ///  - has two distinct assets
 ///  - assets are ordered
@@ -63,6 +67,20 @@ fn test_validate_pool_id() {
         AssetId::from(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
         false,
     ));
+}
+
+#[test]
+fn test_is_stable() {
+    assert(is_stable((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000001),
+        true,
+    )));
+    assert(!is_stable((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000001),
+        false,
+    )));
 }
 
 #[test(should_revert)]
