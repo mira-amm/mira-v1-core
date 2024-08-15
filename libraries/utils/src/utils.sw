@@ -2,7 +2,7 @@ library;
 
 use interfaces::data_structures::{Asset, PoolId};
 use interfaces::errors::InputError;
-use std::{bytes::Bytes, hash::*, string::String};
+use std::{bytes::Bytes, hash::{Hash, sha256}, string::String};
 
 /// Validates that the provided pool id is correct, i.e.:
 ///  - has two distinct assets

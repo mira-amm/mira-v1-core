@@ -1,6 +1,6 @@
 library;
 
-use std::{math::*, primitive_conversions::u64::*};
+use std::math::{Power, Root};
 use interfaces::errors::AmmError;
 
 const ONE_E_18: u256 = 1_000_000_000_000_000_000;
