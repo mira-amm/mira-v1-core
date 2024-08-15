@@ -40,3 +40,79 @@ fn push_bytes(ref mut a: Bytes, b: Bytes) {
         i = i + 1;
     }
 }
+
+#[test]
+fn test_validate_pool_id() {
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000001),
+        true,
+    ));
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000001),
+        false,
+    ));
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
+        true,
+    ));
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
+        false,
+    ));
+}
+
+#[test(should_revert)]
+fn test_validate_pool_id_for_identical_assets() {
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        true,
+    ));
+}
+
+#[test(should_revert)]
+fn test_validate_pool_id_for_unsorted_assets() {
+    validate_pool_id((
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000001),
+        AssetId::from(0x0000000000000000000000000000000000000000000000000000000000000000),
+        true,
+    ));
+}
+
+#[test]
+fn test_build_lp_name() {
+    assert_eq(
+        build_lp_name(String::from_ascii_str("A"), String::from_ascii_str("B")),
+        String::from_ascii_str("A-B LP"),
+    );
+    assert_eq(
+        build_lp_name(String::from_ascii_str(""), String::from_ascii_str("B")),
+        String::from_ascii_str("-B LP"),
+    );
+    assert_eq(
+        build_lp_name(String::from_ascii_str("A"), String::from_ascii_str("")),
+        String::from_ascii_str("A- LP"),
+    );
+    assert_eq(
+        build_lp_name(String::from_ascii_str(""), String::from_ascii_str("")),
+        String::from_ascii_str("- LP"),
+    );
+    assert_eq(
+        build_lp_name(
+            String::from_ascii_str("Token A"),
+            String::from_ascii_str("Token B"),
+        ),
+        String::from_ascii_str("Token A-Token B LP"),
+    );
+    assert_eq(
+        build_lp_name(
+            String::from_ascii_str("UNKNOWN"),
+            String::from_ascii_str("UNKNOWN"),
+        ),
+        String::from_ascii_str("UNKNOWN-UNKNOWN LP"),
+    );
+}
