@@ -29,15 +29,8 @@ pub fn min(a: u64, b: u64) -> u64 {
     if a < b { a } else { b }
 }
 
-// TODO: find a standard library function for that
 fn pow_decimals(decimals: u8) -> u256 {
-    let mut res: u256 = 1;
-    let mut i: u8 = 0;
-    while i < decimals {
-        res *= 10;
-        i += 1;
-    }
-    res
+    10.as_u256().pow(decimals.into())
 }
 
 fn k(
@@ -145,6 +138,7 @@ fn test_pow_decimals() {
     assert_eq(pow_decimals(8), 100000000);
     assert_eq(pow_decimals(9), 1000000000);
     assert_eq(pow_decimals(18), ONE_E_18);
+    assert_eq(pow_decimals(72), ONE_E_18 * ONE_E_18 * ONE_E_18 * ONE_E_18);
 }
 
 #[test]
