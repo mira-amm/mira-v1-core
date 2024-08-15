@@ -75,12 +75,14 @@ pub fn validate_curve(
     );
 }
 
-
 // Tests
 #[test]
 fn test_proportional_value() {
     assert_eq(proportional_value(2, 3, 6), 1);
-    assert_eq(proportional_value(u64::max(), u64::max(), u64::max()), u64::max());
+    assert_eq(
+        proportional_value(u64::max(), u64::max(), u64::max()),
+        u64::max(),
+    );
     assert_eq(proportional_value(0, 100, 5), 0);
     assert_eq(proportional_value(100, 0, 5), 0);
 }
@@ -98,7 +100,10 @@ fn test_revert_proportional_value_on_u64_overflow() {
 #[test]
 fn test_initial_liquidity() {
     assert_eq(initial_liquidity(1, 1), 1);
-    assert_eq(initial_liquidity(u64::try_from(ONE_E_18).unwrap(), 1_000), 31_622_776_601);
+    assert_eq(
+        initial_liquidity(u64::try_from(ONE_E_18).unwrap(), 1_000),
+        31_622_776_601,
+    );
     assert_eq(initial_liquidity(u64::max(), u64::max()), u64::max());
 }
 
@@ -155,15 +160,23 @@ fn test_k_volatile() {
     assert_eq(k(false, 1, 1, 0, 0), 1);
     assert_eq(k(false, 1_000_000, 1_000, 0, 0), 1_000_000_000);
     assert_eq(k(false, 1_000, 1_000_000, 0, 0), 1_000_000_000);
-    assert_eq(k(false, u64::max(), u64::max(), 0, 0), u64::max().as_u256() * u64::max().as_u256());
+    assert_eq(
+        k(false, u64::max(), u64::max(), 0, 0),
+        u64::max()
+            .as_u256() * u64::max()
+            .as_u256(),
+    );
 
     let mut random_pairs: Vec<(u64, u64)> = Vec::new();
     random_pairs.push((13123, 4253213));
     random_pairs.push((123242387, 1231998653));
     random_pairs.push((898989432, 964834235));
-    for (random_1, random_2) in random_pairs.iter() {
+    for (random_1, random_2)in random_pairs.iter() {
         // test that (k(x, y) == k(y, x))
-        assert_eq(k(false, random_1, random_2, 0, 0), k(false, random_2, random_1, 0, 0));
+        assert_eq(
+            k(false, random_1, random_2, 0, 0),
+            k(false, random_2, random_1, 0, 0),
+        );
     }
 }
 
@@ -177,9 +190,12 @@ fn test_k_stable() {
     random_pairs.push((13123, 4253213));
     random_pairs.push((123242387, 1231998653));
     random_pairs.push((898989432, 964834235));
-    for (random_1, random_2) in random_pairs.iter() {
+    for (random_1, random_2)in random_pairs.iter() {
         // test that (k(x, y) == k(y, x))
-        assert_eq(k(true, random_1, random_2, 0, 0), k(true, random_2, random_1, 0, 0));
+        assert_eq(
+            k(true, random_1, random_2, 0, 0),
+            k(true, random_2, random_1, 0, 0),
+        );
     }
 
     // k(0.3, 0.5) = 0,051
