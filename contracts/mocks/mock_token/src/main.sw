@@ -3,7 +3,6 @@ contract;
 use standards::src5::State;
 use standards::src20::SRC20;
 use sway_libs::asset::base::{_set_decimals, _set_name, _set_symbol, _total_assets};
-use sway_libs::ownership::*;
 use std::{
     asset::mint_to,
     hash::Hash,

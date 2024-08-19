@@ -26,12 +26,7 @@ abi MiraAMM {
 
     #[payable]
     #[storage(read, write)]
-    fn burn(
-        pool_id: PoolId,
-        lp_asset_id: AssetId,
-        liquidity: u64,
-        to: Identity,
-    ) -> (u64, u64);
+    fn burn(pool_id: PoolId, to: Identity) -> (u64, u64);
 
     #[payable]
     #[storage(read, write)]
