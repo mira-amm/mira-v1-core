@@ -73,9 +73,11 @@ pub mod amm {
     pub async fn burn(
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
+        lp_asset_id: AssetId,
+        liquidity: u64,
         to: Identity,
     ) -> FuelCallResponse<(u64, u64)> {
-        contract.methods().burn(pool_id, to).call().await.unwrap()
+        contract.methods().burn(pool_id, lp_asset_id, liquidity, to).call().await.unwrap()
     }
 
     pub async fn swap(
