@@ -362,11 +362,11 @@ impl MiraAMM for Contract {
 
     #[payable]
     #[storage(read, write)]
-    fn burn(pool_id: PoolId, to: Identity) -> (u64, u64) {
+    fn burn(pool_id: PoolId, lp_asset_id: AssetId,liquidity: u64, to: Identity) -> (u64, u64) {
         reentrancy_guard();
         validate_pool_id(pool_id);
 
-        let burned_liquidity = Asset::new(msg_asset_id(), msg_amount());
+        let burned_liquidity = Asset::new(lp_asset_id, liquidity);
         let total_liquidity = burn_lp_asset(pool_id, burned_liquidity);
 
         let mut pool = get_pool(pool_id);
