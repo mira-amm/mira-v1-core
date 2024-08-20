@@ -20,8 +20,8 @@ pub enum InputError {
     UnsortedAssetPair: (),
     /// Hash collision for LP token.
     LPTokenHashCollision: (),
-    /// Not treasury owner.
-    NotTreasuryOwner: (),
+    /// The caller is not admin.
+    NotAdmin: (),
     /// Protocol fees exceed the specified limit.
     ProtocolFeesAreTooHigh: (),
 }

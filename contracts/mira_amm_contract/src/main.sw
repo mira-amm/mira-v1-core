@@ -33,7 +33,7 @@ use sway_libs::reentrancy::reentrancy_guard;
 configurable {
     LP_FEE_VOLATILE: u64 = 30,
     LP_FEE_STABLE: u64 = 5,
-    TREASURY_OWNER: Identity = Identity::Address(Address::from(ZERO_B256)),
+    ADMIN: Identity = Identity::Address(Address::from(ZERO_B256)),
 }
 
 storage {
@@ -241,6 +241,10 @@ fn get_protocol_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64,
     (calculate_fee(amount_0, fee), calculate_fee(amount_1, fee))
 }
 
+fn check_called_by_admin() {
+    require(msg_sender().unwrap() == ADMIN, InputError::NotAdmin);
+}
+
 impl SRC20 for Contract {
     #[storage(read)]
     fn total_assets() -> u64 {
@@ -317,11 +321,7 @@ impl MiraAMM for Contract {
 
     #[storage(write)]
     fn set_protocol_fees(volatile_fee: u64, stable_fee: u64) {
-        require(
-            msg_sender()
-                .unwrap() == TREASURY_OWNER,
-            InputError::NotTreasuryOwner,
-        );
+        check_called_by_admin();
         // protocol fees cannot exceed 20% of the LP fees
         require(
             volatile_fee <= LP_FEE_VOLATILE / 5 && stable_fee <= LP_FEE_STABLE / 5,
@@ -439,7 +439,7 @@ impl MiraAMM for Contract {
 
         let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
         let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
-        transfer_assets(pool_id, TREASURY_OWNER, protocol_fee_0, protocol_fee_1);
+        transfer_assets(pool_id, ADMIN, protocol_fee_0, protocol_fee_1);
 
         let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
         let asset_1_in_adjusted = asset_1_in - protocol_fee_1;
