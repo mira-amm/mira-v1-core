@@ -23,7 +23,7 @@ use standards::src20::SRC20;
 use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
-use interfaces::{callee::IBaseCallee, mira_amm::MiraAMM};
+use interfaces::{callee::IBaseCallee, hook::IBaseHook, mira_amm::MiraAMM};
 use interfaces::data_structures::{Asset, PoolId, PoolInfo, PoolMetadata,};
 use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
@@ -49,6 +49,8 @@ storage {
     lp_name: StorageMap<AssetId, StorageString> = StorageMap {},
     /// Protocol fees in basis points for volatile and stable pools, respectively.
     protocol_fees: (u64, u64) = (0, 0),
+    /// Hook to call on all reserve updates.
+    hook: Option<ContractId> = None,
 }
 
 const MINIMUM_LIQUIDITY: u64 = 1000;
@@ -245,6 +247,36 @@ fn check_called_by_admin() {
     require(msg_sender().unwrap() == ADMIN, InputError::NotAdmin);
 }
 
+#[storage(read)]
+fn get_hook() -> Option<ContractId> {
+    storage.hook.read()
+}
+
+#[storage(read)]
+fn call_hook(
+    to: Identity,
+    asset_0_in: u64,
+    asset_1_in: u64,
+    asset_0_out: u64,
+    asset_1_out: u64,
+    lp_token: u64,
+) {
+    if let Some(hook) = get_hook() {
+        abi(IBaseHook, hook
+            .into())
+            .hook(
+                msg_sender()
+                    .unwrap(),
+                to,
+                asset_0_in,
+                asset_1_in,
+                asset_0_out,
+                asset_1_out,
+                lp_token,
+            );
+    }
+}
+
 impl SRC20 for Contract {
     #[storage(read)]
     fn total_assets() -> u64 {
@@ -330,6 +362,18 @@ impl MiraAMM for Contract {
         storage.protocol_fees.write((volatile_fee, stable_fee));
     }
 
+    #[storage(write)]
+    fn set_hook(contract_id: Option<ContractId>) {
+        check_called_by_admin();
+        // sway doesn't allow to check if a contract id implements an interface
+        storage.hook.write(contract_id);
+    }
+
+    #[storage(read)]
+    fn hook() -> Option<ContractId> {
+        get_hook()
+    }
+
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         reentrancy_guard();
@@ -369,6 +413,9 @@ impl MiraAMM for Contract {
             asset_0_in,
             asset_1_in,
         });
+
+        call_hook(to, asset_0_in, asset_1_in, 0, 0, minted.amount);
+
         minted
     }
 
@@ -397,6 +444,8 @@ impl MiraAMM for Contract {
             asset_0_out,
             asset_1_out,
         });
+
+        call_hook(to, 0, 0, asset_0_out, asset_1_out, burned_liquidity.amount);
         (asset_0_out, asset_1_out)
     }
 
@@ -471,5 +520,7 @@ impl MiraAMM for Contract {
             asset_0_out,
             asset_1_out,
         });
+
+        call_hook(to, asset_0_in, asset_1_in, asset_0_out, asset_1_out, 0);
     }
 }
