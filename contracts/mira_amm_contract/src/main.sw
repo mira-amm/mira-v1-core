@@ -270,6 +270,7 @@ fn get_hook() -> Option<ContractId> {
 
 #[storage(read)]
 fn call_hook(
+    pool_id: PoolId,
     to: Identity,
     asset_0_in: u64,
     asset_1_in: u64,
@@ -281,6 +282,7 @@ fn call_hook(
         abi(IBaseHook, hook
             .into())
             .hook(
+                pool_id,
                 msg_sender()
                     .unwrap(),
                 to,
@@ -429,7 +431,7 @@ impl MiraAMM for Contract {
             asset_1_in,
         });
 
-        call_hook(to, asset_0_in, asset_1_in, 0, 0, minted.amount);
+        call_hook(pool_id, to, asset_0_in, asset_1_in, 0, 0, minted.amount);
 
         minted
     }
@@ -460,7 +462,16 @@ impl MiraAMM for Contract {
             asset_1_out,
         });
 
-        call_hook(to, 0, 0, asset_0_out, asset_1_out, burned_liquidity.amount);
+        call_hook(
+            pool_id,
+            to,
+            0,
+            0,
+            asset_0_out,
+            asset_1_out,
+            burned_liquidity
+                .amount,
+        );
         (asset_0_out, asset_1_out)
     }
 
@@ -536,7 +547,15 @@ impl MiraAMM for Contract {
             asset_1_out,
         });
 
-        call_hook(to, asset_0_in, asset_1_in, asset_0_out, asset_1_out, 0);
+        call_hook(
+            pool_id,
+            to,
+            asset_0_in,
+            asset_1_in,
+            asset_0_out,
+            asset_1_out,
+            0,
+        );
     }
 
     #[storage(read, write)]
