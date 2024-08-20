@@ -29,10 +29,10 @@ use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
 use sway_libs::reentrancy::reentrancy_guard;
 
-// 0,3%, 0,1% respectively, in basis points
+// 0,3%, 0,05% respectively, in basis points
 configurable {
     LP_FEE_VOLATILE: u64 = 30,
-    LP_FEE_STABLE: u64 = 10,
+    LP_FEE_STABLE: u64 = 5,
     TREASURY_OWNER: Identity = Identity::Address(Address::from(ZERO_B256)),
 }
 
