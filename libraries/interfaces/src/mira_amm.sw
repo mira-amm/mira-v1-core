@@ -22,6 +22,12 @@ abi MiraAMM {
     #[storage(write)]
     fn set_protocol_fees(volatile_fee: u64, stable_fee: u64);
 
+    #[storage(write)]
+    fn set_hook(contract_id: Option<ContractId>);
+
+    #[storage(read)]
+    fn hook() -> Option<ContractId>;
+
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset;
 
