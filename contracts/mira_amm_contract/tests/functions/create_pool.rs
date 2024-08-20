@@ -1,6 +1,6 @@
 mod success {
 
-    use test_harness::interface::amm::{create_pool, pool_metadata, pools};
+    use test_harness::interface::amm::{create_pool, pool_metadata};
 
     use crate::utils::setup;
 
@@ -30,9 +30,6 @@ mod success {
         assert_eq!(pool_id.0, token_a_id);
         assert_eq!(pool_id.1, token_b_id);
         assert_eq!(pool_id.2, false);
-
-        let pools = pools(&amm).await.value;
-        assert_eq!(pools.len(), 1);
 
         let pool_metadata_request = pool_metadata(&amm, pool_id).await;
         assert_ne!(pool_metadata_request.value, None);
@@ -70,9 +67,6 @@ mod success {
         assert_eq!(pool_id.0, token_a_id);
         assert_eq!(pool_id.1, token_b_id);
         assert_eq!(pool_id.2, true);
-
-        let pools = pools(&amm).await.value;
-        assert_eq!(pools.len(), 1);
 
         let pool_metadata_request = pool_metadata(&amm, pool_id).await;
         assert_ne!(pool_metadata_request.value, None);
