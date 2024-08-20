@@ -29,13 +29,11 @@ use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
 use sway_libs::reentrancy::reentrancy_guard;
 
-// 0,3%, 0,1%, 0,05%, 0,02% respectively, in basis points
+// 0,3%, 0,05% respectively, in basis points
 configurable {
     LP_FEE_VOLATILE: u64 = 30,
-    LP_FEE_STABLE: u64 = 10,
-    PROTOCOL_FEE_VOLATILE: u64 = 5,
-    PROTOCOL_FEE_STABLE: u64 = 2,
-    PROTOCOL_FEES_COLLECTOR: Identity = Identity::Address(Address::from(ZERO_B256)),
+    LP_FEE_STABLE: u64 = 5,
+    ADMIN: Identity = Identity::Address(Address::from(ZERO_B256)),
 }
 
 storage {
@@ -49,6 +47,8 @@ storage {
     lp_total_supply: StorageMap<AssetId, u64> = StorageMap {},
     /// The name of a specific asset minted by this contract.
     lp_name: StorageMap<AssetId, StorageString> = StorageMap {},
+    /// Protocol fees in basis points for volatile and stable pools, respectively.
+    protocol_fees: (u64, u64) = (0, 0),
 }
 
 const MINIMUM_LIQUIDITY: u64 = 1000;
@@ -216,6 +216,11 @@ fn transfer_assets(
     }
 }
 
+#[storage(read)]
+fn get_protocol_fees() -> (u64, u64) {
+    storage.protocol_fees.read()
+}
+
 fn get_lp_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
     let fee = if is_stable(pool_id) {
         LP_FEE_STABLE
@@ -225,13 +230,19 @@ fn get_lp_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) 
     (calculate_fee(amount_0, fee), calculate_fee(amount_1, fee))
 }
 
+#[storage(read)]
 fn get_protocol_pool_fee(pool_id: PoolId, amount_0: u64, amount_1: u64) -> (u64, u64) {
+    let (protocol_fee_volatile, protocol_fee_stable) = get_protocol_fees();
     let fee = if is_stable(pool_id) {
-        PROTOCOL_FEE_STABLE
+        protocol_fee_stable
     } else {
-        PROTOCOL_FEE_VOLATILE
+        protocol_fee_volatile
     };
     (calculate_fee(amount_0, fee), calculate_fee(amount_1, fee))
+}
+
+fn check_called_by_admin() {
+    require(msg_sender().unwrap() == ADMIN, InputError::NotAdmin);
 }
 
 impl SRC20 for Contract {
@@ -302,8 +313,21 @@ impl MiraAMM for Contract {
         storage.pool_ids.load_vec()
     }
 
+    #[storage(read)]
     fn fees() -> (u64, u64, u64, u64) {
-        (LP_FEE_VOLATILE, LP_FEE_STABLE, PROTOCOL_FEE_VOLATILE, PROTOCOL_FEE_STABLE)
+        let (protocol_fee_volatile, protocol_fee_stable) = get_protocol_fees();
+        (LP_FEE_VOLATILE, LP_FEE_STABLE, protocol_fee_volatile, protocol_fee_stable)
+    }
+
+    #[storage(write)]
+    fn set_protocol_fees(volatile_fee: u64, stable_fee: u64) {
+        check_called_by_admin();
+        // protocol fees cannot exceed 20% of the LP fees
+        require(
+            volatile_fee <= LP_FEE_VOLATILE / 5 && stable_fee <= LP_FEE_STABLE / 5,
+            InputError::ProtocolFeesAreTooHigh,
+        );
+        storage.protocol_fees.write((volatile_fee, stable_fee));
     }
 
     #[storage(read, write)]
@@ -415,12 +439,7 @@ impl MiraAMM for Contract {
 
         let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
         let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
-        transfer_assets(
-            pool_id,
-            PROTOCOL_FEES_COLLECTOR,
-            protocol_fee_0,
-            protocol_fee_1,
-        );
+        transfer_assets(pool_id, ADMIN, protocol_fee_0, protocol_fee_1);
 
         let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
         let asset_1_in_adjusted = asset_1_in - protocol_fee_1;

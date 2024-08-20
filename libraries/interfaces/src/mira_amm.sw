@@ -19,7 +19,11 @@ abi MiraAMM {
     #[storage(read)]
     fn pools() -> Vec<PoolId>;
 
+    #[storage(read)]
     fn fees() -> (u64, u64, u64, u64);
+
+    #[storage(write)]
+    fn set_protocol_fees(volatile_fee: u64, stable_fee: u64);
 
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset;
