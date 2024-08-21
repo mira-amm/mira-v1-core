@@ -19,19 +19,21 @@ use std::{
     storage::storage_vec::*,
     string::String,
 };
-use standards::{
-    src20::SRC20,
-    src5::{SRC5, State},
-};
+use standards::{src20::SRC20, src5::{SRC5, State},};
 use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
-use interfaces::{callee::IBaseCallee, mira_amm::MiraAMM};
+use interfaces::{callee::IBaseCallee, hook::IBaseHook, mira_amm::MiraAMM};
 use interfaces::data_structures::{Asset, PoolId, PoolInfo, PoolMetadata,};
 use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
 use sway_libs::{
-    ownership::{only_owner, _owner, initialize_ownership, transfer_ownership},
+    ownership::{
+        _owner,
+        initialize_ownership,
+        only_owner,
+        transfer_ownership,
+    },
     reentrancy::reentrancy_guard,
 };
 
@@ -54,6 +56,8 @@ storage {
     lp_name: StorageMap<AssetId, StorageString> = StorageMap {},
     /// Protocol fees in basis points for volatile and stable pools, respectively.
     protocol_fees: (u64, u64) = (0, 0),
+    /// Hook to call on all reserve updates.
+    hook: Option<ContractId> = None,
 }
 
 const MINIMUM_LIQUIDITY: u64 = 1000;
@@ -261,6 +265,38 @@ impl SRC5 for Contract {
     }
 }
 
+#[storage(read)]
+fn get_hook() -> Option<ContractId> {
+    storage.hook.read()
+}
+
+#[storage(read)]
+fn call_hook(
+    pool_id: PoolId,
+    to: Identity,
+    asset_0_in: u64,
+    asset_1_in: u64,
+    asset_0_out: u64,
+    asset_1_out: u64,
+    lp_token: u64,
+) {
+    if let Some(hook) = get_hook() {
+        abi(IBaseHook, hook
+            .into())
+            .hook(
+                pool_id,
+                msg_sender()
+                    .unwrap(),
+                to,
+                asset_0_in,
+                asset_1_in,
+                asset_0_out,
+                asset_1_out,
+                lp_token,
+            );
+    }
+}
+
 impl SRC20 for Contract {
     #[storage(read)]
     fn total_assets() -> u64 {
@@ -345,6 +381,18 @@ impl MiraAMM for Contract {
         storage.protocol_fees.write((volatile_fee, stable_fee));
     }
 
+    #[storage(write)]
+    fn set_hook(contract_id: Option<ContractId>) {
+        only_owner();
+        // sway doesn't allow to check if a contract id implements an interface
+        storage.hook.write(contract_id);
+    }
+
+    #[storage(read)]
+    fn hook() -> Option<ContractId> {
+        get_hook()
+    }
+
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         reentrancy_guard();
@@ -384,6 +432,9 @@ impl MiraAMM for Contract {
             asset_0_in,
             asset_1_in,
         });
+
+        call_hook(pool_id, to, asset_0_in, asset_1_in, 0, 0, minted.amount);
+
         minted
     }
 
@@ -412,6 +463,17 @@ impl MiraAMM for Contract {
             asset_0_out,
             asset_1_out,
         });
+
+        call_hook(
+            pool_id,
+            to,
+            0,
+            0,
+            asset_0_out,
+            asset_1_out,
+            burned_liquidity
+                .amount,
+        );
         (asset_0_out, asset_1_out)
     }
 
@@ -454,7 +516,13 @@ impl MiraAMM for Contract {
 
         let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
         let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
-        transfer_assets(pool_id, get_fee_recipient().unwrap(), protocol_fee_0, protocol_fee_1);
+        transfer_assets(
+            pool_id,
+            get_fee_recipient()
+                .unwrap(),
+            protocol_fee_0,
+            protocol_fee_1,
+        );
 
         let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
         let asset_1_in_adjusted = asset_1_in - protocol_fee_1;
@@ -486,6 +554,16 @@ impl MiraAMM for Contract {
             asset_0_out,
             asset_1_out,
         });
+
+        call_hook(
+            pool_id,
+            to,
+            asset_0_in,
+            asset_1_in,
+            asset_0_out,
+            asset_1_out,
+            0,
+        );
     }
 
     #[storage(read, write)]
