@@ -90,6 +90,8 @@ mod success {
 mod revert {
     use test_harness::interface::amm::create_pool;
 
+    use fuels::types::ContractId;
+
     use crate::utils::setup;
 
     #[tokio::test]
@@ -113,6 +115,33 @@ mod revert {
             token_a_sub_id,
             false,
             None,
+        )
+        .await
+        .value;
+    }
+
+
+    #[tokio::test]
+    #[should_panic(expected = "HookNotApproved")]
+    async fn fails_to_create_pool_with_unapproved_hook() {
+        let (
+            amm,
+            _wallet,
+            token_contract_id,
+            token_contract,
+            _token_ids,
+            (token_a_sub_id, _token_b_sub_id),
+        ) = setup().await;
+
+        create_pool(
+            &amm,
+            &token_contract,
+            token_contract_id,
+            token_a_sub_id,
+            token_contract_id,
+            token_a_sub_id,
+            false,
+            Some(ContractId::zeroed()),
         )
         .await
         .value;
