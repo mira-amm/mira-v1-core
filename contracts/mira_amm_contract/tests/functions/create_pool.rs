@@ -23,6 +23,7 @@ mod success {
             token_contract_id,
             token_b_sub_id,
             false,
+            None,
         )
         .await
         .value;
@@ -63,6 +64,7 @@ mod success {
             token_contract_id,
             token_b_sub_id,
             true,
+            None,
         )
         .await
         .value;
@@ -110,6 +112,7 @@ mod revert {
             token_contract_id,
             token_a_sub_id,
             false,
+            None,
         )
         .await
         .value;

@@ -1,3 +1,3 @@
-use fuels::types::AssetId;
+use fuels::types::{AssetId, ContractId};
 
-pub type PoolId = (AssetId, AssetId, bool);
+pub type PoolId = (AssetId, AssetId, bool, Option<ContractId>);

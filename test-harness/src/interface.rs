@@ -29,6 +29,7 @@ pub mod amm {
         token_1_contract_id: ContractId,
         token_1_sub_id: Bits256,
         is_stable: bool,
+        hook: Option<ContractId>,
     ) -> FuelCallResponse<PoolId> {
         contract
             .methods()
@@ -38,6 +39,7 @@ pub mod amm {
                 token_1_contract_id,
                 token_1_sub_id,
                 is_stable,
+                hook,
             )
             .with_contracts(&[token_contract])
             .call()
