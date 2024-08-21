@@ -41,4 +41,7 @@ abi MiraAMM {
         to: Identity,
         data: Bytes,
     );
+
+    #[storage(read, write)]
+    fn transfer_ownership(new_owner: Identity);
 }
