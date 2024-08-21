@@ -30,3 +30,8 @@ pub struct SwapEvent {
     pub asset_0_out: u64,
     pub asset_1_out: u64,
 }
+
+pub struct ApproveHookEvent {
+    pub contract_id: ContractId,
+    pub is_approved: bool,
+}

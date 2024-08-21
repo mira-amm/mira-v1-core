@@ -11,6 +11,7 @@ abi MiraAMM {
         token_1_contract_id: ContractId,
         token_1_sub_id: b256,
         is_stable: bool,
+        hook: Option<ContractId>,
     ) -> PoolId;
 
     #[storage(read)]
@@ -24,12 +25,6 @@ abi MiraAMM {
 
     #[storage(write)]
     fn set_protocol_fees(volatile_fee: u64, stable_fee: u64);
-
-    #[storage(write)]
-    fn set_hook(contract_id: Option<ContractId>);
-
-    #[storage(read)]
-    fn hook() -> Option<ContractId>;
 
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset;
@@ -47,4 +42,10 @@ abi MiraAMM {
         to: Identity,
         data: Bytes,
     );
+
+    #[storage(read, write)]
+    fn set_approved_hook(contract_id: ContractId, is_approved: bool);
+
+    #[storage(read)]
+    fn is_approved_hook(contract_id: ContractId) -> bool;
 }

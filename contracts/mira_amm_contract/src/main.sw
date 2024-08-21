@@ -26,7 +26,7 @@ use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value,
 use interfaces::{callee::IBaseCallee, hook::IBaseHook, mira_amm::MiraAMM};
 use interfaces::data_structures::{Asset, PoolId, PoolInfo, PoolMetadata,};
 use interfaces::errors::{AmmError, InputError};
-use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
+use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent, ApproveHookEvent};
 use sway_libs::reentrancy::reentrancy_guard;
 
 // 0,3%, 0,05% respectively, in basis points
@@ -49,8 +49,8 @@ storage {
     lp_name: StorageMap<AssetId, StorageString> = StorageMap {},
     /// Protocol fees in basis points for volatile and stable pools, respectively.
     protocol_fees: (u64, u64) = (0, 0),
-    /// Hook to call on all reserve updates.
-    hook: Option<ContractId> = None,
+    /// Which hooks are approved to be added to pools.
+    approved_hooks: StorageMap<ContractId, bool> = StorageMap {},
 }
 
 const MINIMUM_LIQUIDITY: u64 = 1000;
@@ -248,11 +248,6 @@ fn check_called_by_admin() {
 }
 
 #[storage(read)]
-fn get_hook() -> Option<ContractId> {
-    storage.hook.read()
-}
-
-#[storage(read)]
 fn call_hook(
     pool_id: PoolId,
     to: Identity,
@@ -262,7 +257,7 @@ fn call_hook(
     asset_1_out: u64,
     lp_token: u64,
 ) {
-    if let Some(hook) = get_hook() {
+    if let Some(hook) = pool_id.3 {
         abi(IBaseHook, hook
             .into())
             .hook(
@@ -318,11 +313,20 @@ impl MiraAMM for Contract {
         token_1_contract_id: ContractId,
         token_1_sub_id: b256,
         is_stable: bool,
+        hook: Option<ContractId>,
     ) -> PoolId {
         reentrancy_guard();
+
+        if let Some(hook_contract) = hook {
+            require(
+                storage.approved_hooks.get(hook_contract).try_read().unwrap_or(false),
+                InputError::HookNotApproved(hook_contract),
+            );
+        }
+
         let token_0_id = AssetId::new(token_0_contract_id, token_0_sub_id);
         let token_1_id = AssetId::new(token_1_contract_id, token_1_sub_id);
-        let pool_id: PoolId = (token_0_id, token_1_id, is_stable);
+        let pool_id: PoolId = (token_0_id, token_1_id, is_stable, hook);
 
         let (symbol_0, decimals_0) = get_symbol_and_decimals(token_0_contract_id, token_0_id);
         let (symbol_1, decimals_1) = get_symbol_and_decimals(token_1_contract_id, token_1_id);
@@ -362,18 +366,6 @@ impl MiraAMM for Contract {
             InputError::ProtocolFeesAreTooHigh,
         );
         storage.protocol_fees.write((volatile_fee, stable_fee));
-    }
-
-    #[storage(write)]
-    fn set_hook(contract_id: Option<ContractId>) {
-        check_called_by_admin();
-        // sway doesn't allow to check if a contract id implements an interface
-        storage.hook.write(contract_id);
-    }
-
-    #[storage(read)]
-    fn hook() -> Option<ContractId> {
-        get_hook()
     }
 
     #[storage(read, write)]
@@ -541,5 +533,21 @@ impl MiraAMM for Contract {
             asset_1_out,
             0,
         );
+    }
+
+    #[storage(read, write)]
+    fn set_approved_hook(contract_id: ContractId, is_approved: bool) {
+        check_called_by_admin();
+        storage.approved_hooks.insert(contract_id, is_approved);
+
+        log(ApproveHookEvent {
+            contract_id,
+            is_approved,
+        });
+    }
+
+    #[storage(read)]
+    fn is_approved_hook(contract_id: ContractId) -> bool {
+        storage.approved_hooks.get(contract_id).try_read().unwrap_or(false)
     }
 }

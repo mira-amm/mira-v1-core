@@ -1,7 +1,20 @@
 library;
 
-/// (asset_0, asset_1, is_stable)
-pub type PoolId = (AssetId, AssetId, bool);
+use std::hash::{Hash, Hasher};
+
+pub type PoolId = (AssetId, AssetId, bool, Option<ContractId>);
+
+impl Hash for PoolId {
+    fn hash(self, ref mut state: Hasher) {
+        self.0.hash(state);
+        self.1.hash(state);
+        self.2.hash(state);
+
+        if let Some(hook) = self.3 {
+            hook.hash(state);
+        }
+    }
+}
 
 pub struct Asset {
     pub id: AssetId,

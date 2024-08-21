@@ -24,6 +24,8 @@ pub enum InputError {
     NotAdmin: (),
     /// Protocol fees exceed the specified limit.
     ProtocolFeesAreTooHigh: (),
+    /// The hook is not approved.
+    HookNotApproved: ContractId,
 }
 
 /// Errors related to AMM logic.
