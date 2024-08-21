@@ -52,10 +52,6 @@ pub mod amm {
         contract.methods().pool_metadata(pool_id).call().await.unwrap()
     }
 
-    pub async fn pools(contract: &MiraAMM<WalletUnlocked>) -> FuelCallResponse<Vec<PoolId>> {
-        contract.methods().pools().call().await.unwrap()
-    }
-
     pub async fn fees(
         contract: &MiraAMM<WalletUnlocked>,
     ) -> FuelCallResponse<(u64, u64, u64, u64)> {

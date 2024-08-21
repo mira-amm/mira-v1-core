@@ -39,8 +39,8 @@ configurable {
 storage {
     /// Pools storage
     pools: StorageMap<PoolId, PoolInfo> = StorageMap {},
-    /// Vector of all created pool ids
-    pool_ids: StorageVec<PoolId> = StorageVec {},
+    /// Total number of pools
+    total_pools: u64 = 0,
     /// Total reserves of specific assets across all pools
     total_reserves: StorageMap<AssetId, u64> = StorageMap {},
     /// The total supply of coins for a specific asset minted by this contract.
@@ -115,7 +115,7 @@ fn initialize_pool(
 
     let pool_info = PoolInfo::new(pool_id, decimals_0, decimals_1);
     storage.pools.insert(pool_id, pool_info);
-    storage.pool_ids.push(pool_id);
+    storage.total_pools.write(storage.total_pools.read() + 1);
 
     storage.lp_name.get(pool_lp_asset).write_slice(lp_name);
     storage.lp_total_supply.insert(pool_lp_asset, 0);
@@ -248,16 +248,19 @@ fn check_called_by_admin() {
 impl SRC20 for Contract {
     #[storage(read)]
     fn total_assets() -> u64 {
-        storage.pool_ids.len()
+        storage.total_pools.read()
     }
+
     #[storage(read)]
     fn total_supply(asset: AssetId) -> Option<u64> {
         get_lp_total_supply(asset)
     }
+
     #[storage(read)]
     fn name(asset: AssetId) -> Option<String> {
         storage.lp_name.get(asset).read_slice()
     }
+
     #[storage(read)]
     fn symbol(asset: AssetId) -> Option<String> {
         if lp_asset_exists(asset) {
@@ -266,6 +269,7 @@ impl SRC20 for Contract {
             None
         }
     }
+
     #[storage(read)]
     fn decimals(asset: AssetId) -> Option<u8> {
         if lp_asset_exists(asset) {
@@ -306,11 +310,6 @@ impl MiraAMM for Contract {
             Some(pool) => Some(PoolMetadata::from_pool_and_liquidity(pool, get_pool_liquidity(pool_id))),
             None => None,
         }
-    }
-
-    #[storage(read)]
-    fn pools() -> Vec<PoolId> {
-        storage.pool_ids.load_vec()
     }
 
     #[storage(read)]
