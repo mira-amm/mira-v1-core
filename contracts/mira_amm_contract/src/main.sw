@@ -19,10 +19,7 @@ use std::{
     storage::storage_vec::*,
     string::String,
 };
-use standards::{
-    src20::SRC20,
-    src5::{SRC5, State},
-};
+use standards::{src20::SRC20, src5::{SRC5, State},};
 use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
@@ -31,7 +28,12 @@ use interfaces::data_structures::{Asset, PoolId, PoolInfo, PoolMetadata,};
 use interfaces::errors::{AmmError, InputError};
 use interfaces::events::{BurnEvent, CreatePoolEvent, MintEvent, SwapEvent};
 use sway_libs::{
-    ownership::{only_owner, _owner, initialize_ownership, transfer_ownership},
+    ownership::{
+        _owner,
+        initialize_ownership,
+        only_owner,
+        transfer_ownership,
+    },
     reentrancy::reentrancy_guard,
 };
 
@@ -381,7 +383,7 @@ impl MiraAMM for Contract {
 
     #[storage(write)]
     fn set_hook(contract_id: Option<ContractId>) {
-        check_called_by_admin();
+        only_owner();
         // sway doesn't allow to check if a contract id implements an interface
         storage.hook.write(contract_id);
     }
@@ -514,7 +516,13 @@ impl MiraAMM for Contract {
 
         let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
         let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
-        transfer_assets(pool_id, get_fee_recipient().unwrap(), protocol_fee_0, protocol_fee_1);
+        transfer_assets(
+            pool_id,
+            get_fee_recipient()
+                .unwrap(),
+            protocol_fee_0,
+            protocol_fee_1,
+        );
 
         let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
         let asset_1_in_adjusted = asset_1_in - protocol_fee_1;
