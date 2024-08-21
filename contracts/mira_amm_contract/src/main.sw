@@ -82,16 +82,20 @@ fn get_total_reserve(asset_id: AssetId) -> u64 {
 }
 
 #[storage(write)]
-fn update_total_reserve(asset_id: AssetId) {
+fn update_total_reserve(asset_id: AssetId, should_remain_on_balance: u64) {
     storage
         .total_reserves
-        .insert(asset_id, this_balance(asset_id));
+        .insert(asset_id, this_balance(asset_id) - should_remain_on_balance);
 }
 
 #[storage(write)]
-fn update_total_reserves(pool_id: PoolId) {
-    update_total_reserve(pool_id.0);
-    update_total_reserve(pool_id.1);
+fn update_total_reserves(
+    pool_id: PoolId,
+    should_remain_on_balance_0: u64,
+    should_remain_on_balance_1: u64,
+) {
+    update_total_reserve(pool_id.0, should_remain_on_balance_0);
+    update_total_reserve(pool_id.1, should_remain_on_balance_1);
 }
 
 #[storage(read)]
@@ -203,25 +207,38 @@ fn update_reserves(
     amount_1_in: u64,
     amount_0_out: u64,
     amount_1_out: u64,
+    should_remain_on_balance_0: u64,
+    should_remain_on_balance_1: u64,
 ) {
     let reserve_0 = pool.reserve_0 + amount_0_in - amount_0_out;
     let reserve_1 = pool.reserve_1 + amount_1_in - amount_1_out;
     let updated_pool = pool.copy_with_reserves(reserve_0, reserve_1);
     storage.pools.insert(pool.id, updated_pool);
-    update_total_reserves(pool.id);
+    update_total_reserves(
+        pool.id,
+        should_remain_on_balance_0,
+        should_remain_on_balance_1,
+    );
 }
 
+/// Transfers out the pair of assets. Returns the amounts that should remain
+/// on the contract balance unaccounted in total balance
 fn transfer_assets(
     pool_id: PoolId,
     to: Identity,
     asset_0_out: u64,
     asset_1_out: u64,
-) {
-    if (asset_0_out > 0) {
-        transfer(to, pool_id.0, asset_0_out);
-    }
-    if (asset_1_out > 0) {
-        transfer(to, pool_id.1, asset_1_out);
+) -> (u64, u64) {
+    if (to == Identity::ContractId(ContractId::this())) {
+        (asset_0_out, asset_1_out)
+    } else {
+        if (asset_0_out > 0) {
+            transfer(to, pool_id.0, asset_0_out);
+        }
+        if (asset_1_out > 0) {
+            transfer(to, pool_id.1, asset_1_out);
+        }
+        (0, 0)
     }
 }
 
@@ -423,7 +440,7 @@ impl MiraAMM for Contract {
         require(added_liquidity > 0, AmmError::NoLiquidityAdded);
 
         let minted = mint_lp_asset(pool_id, to, added_liquidity);
-        update_reserves(pool, asset_0_in, asset_1_in, 0, 0);
+        update_reserves(pool, asset_0_in, asset_1_in, 0, 0, 0, 0);
 
         log(MintEvent {
             pool_id,
@@ -454,7 +471,7 @@ impl MiraAMM for Contract {
         transfer(to, pool_id.0, asset_0_out);
         transfer(to, pool_id.1, asset_1_out);
 
-        update_reserves(pool, 0, 0, asset_0_out, asset_1_out);
+        update_reserves(pool, 0, 0, asset_0_out, asset_1_out, 0, 0);
 
         log(BurnEvent {
             pool_id,
@@ -497,7 +514,7 @@ impl MiraAMM for Contract {
             AmmError::InsufficientLiquidity,
         );
         // Optimistically transfer assets
-        transfer_assets(pool_id, to, asset_0_out, asset_1_out);
+        let (should_remain_0, should_remain_1) = transfer_assets(pool_id, to, asset_0_out, asset_1_out);
 
         if data.len() > 0 {
             abi(IBaseCallee, to
@@ -516,7 +533,7 @@ impl MiraAMM for Contract {
 
         let (protocol_fee_0, protocol_fee_1) = get_protocol_pool_fee(pool_id, asset_0_in, asset_1_in);
         let (lp_fee_0, lp_fee_1) = get_lp_pool_fee(pool_id, asset_0_in, asset_1_in);
-        transfer_assets(
+        let _ = transfer_assets(
             pool_id,
             get_fee_recipient()
                 .unwrap(),
@@ -544,6 +561,8 @@ impl MiraAMM for Contract {
             asset_1_in_adjusted,
             asset_0_out,
             asset_1_out,
+            should_remain_0,
+            should_remain_1,
         );
 
         log(SwapEvent {
