@@ -24,6 +24,8 @@ pub enum InputError {
     NotAdmin: (),
     /// Protocol fees exceed the specified limit.
     ProtocolFeesAreTooHigh: (),
+    /// Pool invariant violation.
+    PoolInvariantViolation: (u64, u64),
 }
 
 /// Errors related to AMM logic.
