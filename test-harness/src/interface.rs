@@ -1,6 +1,5 @@
 use fuels::{
     prelude::{abigen, AssetId, TxPolicies, WalletUnlocked},
-    programs::{call_response::FuelCallResponse, call_utils::TxDependencyExtension},
 };
 
 abigen!(
@@ -15,6 +14,8 @@ abigen!(
 );
 
 pub mod amm {
+    use fuels::prelude::VariableOutputPolicy;
+    use fuels::programs::responses::CallResponse;
     use fuels::types::{Bits256, Bytes, ContractId, Identity};
 
     use crate::types::PoolId;
@@ -29,7 +30,7 @@ pub mod amm {
         token_1_contract_id: ContractId,
         token_1_sub_id: Bits256,
         is_stable: bool,
-    ) -> FuelCallResponse<PoolId> {
+    ) -> CallResponse<PoolId> {
         contract
             .methods()
             .create_pool(
@@ -48,13 +49,13 @@ pub mod amm {
     pub async fn pool_metadata(
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
-    ) -> FuelCallResponse<Option<PoolMetadata>> {
+    ) -> CallResponse<Option<PoolMetadata>> {
         contract.methods().pool_metadata(pool_id).call().await.unwrap()
     }
 
     pub async fn fees(
         contract: &MiraAMM<WalletUnlocked>,
-    ) -> FuelCallResponse<(u64, u64, u64, u64)> {
+    ) -> CallResponse<(u64, u64, u64, u64)> {
         contract.methods().fees().call().await.unwrap()
     }
 
@@ -62,7 +63,7 @@ pub mod amm {
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
         to: Identity,
-    ) -> FuelCallResponse<Asset> {
+    ) -> CallResponse<Asset> {
         contract.methods().mint(pool_id, to).call().await.unwrap()
     }
 
@@ -70,7 +71,7 @@ pub mod amm {
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
         to: Identity,
-    ) -> FuelCallResponse<(u64, u64)> {
+    ) -> CallResponse<(u64, u64)> {
         contract.methods().burn(pool_id, to).call().await.unwrap()
     }
 
@@ -81,11 +82,11 @@ pub mod amm {
         amount_1_out: u64,
         to: Identity,
         data: Bytes,
-    ) -> FuelCallResponse<()> {
+    ) -> CallResponse<()> {
         contract
             .methods()
             .swap(pool_id, amount_0_out, amount_1_out, to, data)
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await
             .unwrap()
@@ -97,7 +98,8 @@ pub mod mock {
         programs::contract::{Contract, LoadConfiguration},
         types::{Bits256, ContractId},
     };
-
+    use fuels::prelude::VariableOutputPolicy;
+    use fuels::programs::responses::CallResponse;
     use crate::paths::MOCK_TOKEN_CONTRACT_BINARY_PATH;
 
     use super::*;
@@ -123,7 +125,7 @@ pub mod mock {
         name: String,
         symbol: String,
         decimals: u8,
-    ) -> FuelCallResponse<AssetId> {
+    ) -> CallResponse<AssetId> {
         contract.methods().add_token(name, symbol, decimals).call().await.unwrap()
     }
 
@@ -131,11 +133,11 @@ pub mod mock {
         contract: &MockToken<WalletUnlocked>,
         asset_id: AssetId,
         amount: u64,
-    ) -> FuelCallResponse<()> {
+    ) -> CallResponse<()> {
         contract
             .methods()
             .mint_tokens(asset_id, amount)
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await
             .unwrap()
@@ -144,7 +146,7 @@ pub mod mock {
     pub async fn get_sub_id(
         contract: &MockToken<WalletUnlocked>,
         asset_id: AssetId,
-    ) -> FuelCallResponse<Option<Bits256>> {
+    ) -> CallResponse<Option<Bits256>> {
         contract.methods().get_sub_id(asset_id).call().await.unwrap()
     }
 }
