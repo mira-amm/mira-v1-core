@@ -8,6 +8,10 @@ runs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
 
+    - name: Add wasm32-unknown-unknown target
+      shell: bash
+      run: rustup target add wasm32-unknown-unknown
+
     - name: Setup Fuelup
       shell: bash
       run: |
