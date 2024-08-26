@@ -1,6 +1,4 @@
-use fuels::{
-    prelude::{abigen, AssetId, TxPolicies, WalletUnlocked},
-};
+use fuels::prelude::{abigen, AssetId, TxPolicies, WalletUnlocked};
 
 abigen!(
     Contract(
@@ -53,9 +51,7 @@ pub mod amm {
         contract.methods().pool_metadata(pool_id).call().await.unwrap()
     }
 
-    pub async fn fees(
-        contract: &MiraAMM<WalletUnlocked>,
-    ) -> CallResponse<(u64, u64, u64, u64)> {
+    pub async fn fees(contract: &MiraAMM<WalletUnlocked>) -> CallResponse<(u64, u64, u64, u64)> {
         contract.methods().fees().call().await.unwrap()
     }
 
@@ -94,13 +90,13 @@ pub mod amm {
 }
 
 pub mod mock {
+    use crate::paths::MOCK_TOKEN_CONTRACT_BINARY_PATH;
+    use fuels::prelude::VariableOutputPolicy;
+    use fuels::programs::responses::CallResponse;
     use fuels::{
         programs::contract::{Contract, LoadConfiguration},
         types::{Bits256, ContractId},
     };
-    use fuels::prelude::VariableOutputPolicy;
-    use fuels::programs::responses::CallResponse;
-    use crate::paths::MOCK_TOKEN_CONTRACT_BINARY_PATH;
 
     use super::*;
 
