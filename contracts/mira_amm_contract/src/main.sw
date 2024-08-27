@@ -81,17 +81,16 @@ fn get_total_reserve(asset_id: AssetId) -> u64 {
     storage.total_reserves.get(asset_id).try_read().unwrap_or(0)
 }
 
-#[storage(write)]
-fn update_total_reserve(asset_id: AssetId) {
-    storage
-        .total_reserves
-        .insert(asset_id, this_balance(asset_id));
-}
-
-#[storage(write)]
-fn update_total_reserves(pool_id: PoolId) {
-    update_total_reserve(pool_id.0);
-    update_total_reserve(pool_id.1);
+#[storage(read, write)]
+fn update_total_reserve(asset_id: AssetId, amount_in: u64, amount_out: u64) {
+    let old_reserve = get_total_reserve(asset_id);
+    let new_reserve = old_reserve + amount_in - amount_out;
+    let balance = this_balance(asset_id);
+    require(
+        balance >= new_reserve,
+        InputError::PoolInvariantViolation((balance, new_reserve)),
+    );
+    storage.total_reserves.insert(asset_id, new_reserve);
 }
 
 #[storage(read)]
@@ -184,9 +183,16 @@ fn get_amount_in(asset_id: AssetId) -> u64 {
 }
 
 #[storage(read)]
-fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64) -> (u64, u64) {
+fn get_amount_in_accounting_out(asset_id: AssetId, amount_out: u64, to: Identity) -> (u64, u64) {
     let total_reserve = get_total_reserve(asset_id);
-    let balance = this_balance(asset_id);
+    let balance = if (to == Identity::ContractId(ContractId::this())) {
+        // Account cases when assets are transferred to this contract (usually in multihops).
+        // We don't account them as part of pool balances, so that they're treated as inputs 
+        // for the next swap.
+        this_balance(asset_id) - amount_out
+    } else {
+        this_balance(asset_id)
+    };
     let after_out = total_reserve - amount_out;
     let amount_in = if balance > after_out {
         balance - after_out
@@ -208,7 +214,8 @@ fn update_reserves(
     let reserve_1 = pool.reserve_1 + amount_1_in - amount_1_out;
     let updated_pool = pool.copy_with_reserves(reserve_0, reserve_1);
     storage.pools.insert(pool.id, updated_pool);
-    update_total_reserves(pool.id);
+    update_total_reserve(pool.id.0, amount_0_in, amount_0_out);
+    update_total_reserve(pool.id.1, amount_1_in, amount_1_out);
 }
 
 fn transfer_assets(
@@ -507,8 +514,8 @@ impl MiraAMM for Contract {
                 .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, data);
         }
 
-        let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out);
-        let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out);
+        let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out, to);
+        let (balance_1, asset_1_in) = get_amount_in_accounting_out(pool_id.1, asset_1_out, to);
         require(
             asset_0_in > 0 || asset_1_in > 0,
             InputError::ZeroInputAmount,
