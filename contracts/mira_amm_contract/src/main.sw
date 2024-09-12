@@ -19,7 +19,19 @@ use std::{
     storage::storage_vec::*,
     string::String,
 };
-use standards::{src20::SRC20, src5::{SRC5, State},};
+use standards::{
+    src20::{
+        SetDecimalsEvent,
+        SetNameEvent,
+        SetSymbolEvent,
+        SRC20,
+        TotalSupplyEvent,
+    },
+    src5::{
+        SRC5,
+        State,
+    },
+};
 use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
 use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
@@ -62,6 +74,40 @@ storage {
 
 const MINIMUM_LIQUIDITY: u64 = 1000;
 const LP_TOKEN_DECIMALS: u8 = 9;
+const LP_TOKEN_SYMBOL = __to_str_array("MIRA-LP");
+
+#[storage(write)]
+fn initialize_lp_asset(sender: Identity, lp_asset: AssetId, name: String) {
+    storage.lp_name.get(lp_asset).write_slice(name);
+    log(SetNameEvent {
+        asset: lp_asset,
+        name: Some(name),
+        sender,
+    });
+
+    log(SetSymbolEvent {
+        asset: lp_asset,
+        symbol: Some(String::from_ascii_str(from_str_array(LP_TOKEN_SYMBOL))),
+        sender,
+    });
+
+    log(SetDecimalsEvent {
+        asset: lp_asset,
+        decimals: LP_TOKEN_DECIMALS,
+        sender,
+    });
+}
+
+#[storage(write)]
+fn update_total_supply(sender: Identity, lp_asset: AssetId, new_supply: u64) {
+    storage.lp_total_supply.insert(lp_asset, new_supply);
+
+    log(TotalSupplyEvent {
+        asset: lp_asset,
+        supply: new_supply,
+        sender,
+    });
+}
 
 #[storage(read)]
 fn get_pool_option(pool_id: PoolId) -> Option<PoolInfo> {
@@ -125,8 +171,9 @@ fn initialize_pool(
     storage.pools.insert(pool_id, pool_info);
     storage.total_pools.write(storage.total_pools.read() + 1);
 
-    storage.lp_name.get(pool_lp_asset).write_slice(lp_name);
-    storage.lp_total_supply.insert(pool_lp_asset, 0);
+    let sender = msg_sender().unwrap();
+    initialize_lp_asset(sender, pool_lp_asset, lp_name);
+    update_total_supply(sender, pool_lp_asset, 0);
 }
 
 #[storage(read, write)]
@@ -134,9 +181,12 @@ fn mint_lp_asset(pool_id: PoolId, to: Identity, amount: u64) -> Asset {
     let (pool_lp_asset_sub_id, pool_lp_asset) = get_lp_asset(pool_id);
     // must be present in the storage
     let lp_total_supply = get_lp_total_supply(pool_lp_asset).unwrap();
-    storage
-        .lp_total_supply
-        .insert(pool_lp_asset, lp_total_supply + amount);
+    update_total_supply(
+        msg_sender()
+            .unwrap(),
+        pool_lp_asset,
+        lp_total_supply + amount,
+    );
     mint_to(to, pool_lp_asset_sub_id, amount);
     Asset::new(pool_lp_asset, amount)
 }
@@ -160,9 +210,13 @@ fn burn_lp_asset(pool_id: PoolId, burned_liquidity: Asset) -> u64 {
         AmmError::InsufficientLiquidity,
     );
 
-    storage
-        .lp_total_supply
-        .insert(pool_lp_asset, lp_total_supply - burned_liquidity.amount);
+    update_total_supply(
+        msg_sender()
+            .unwrap(),
+        pool_lp_asset,
+        lp_total_supply - burned_liquidity
+            .amount,
+    );
     burn(pool_lp_asset_sub_id, burned_liquidity.amount);
     lp_total_supply
 }
@@ -323,7 +377,7 @@ impl SRC20 for Contract {
     #[storage(read)]
     fn symbol(asset: AssetId) -> Option<String> {
         if lp_asset_exists(asset) {
-            Some(String::from_ascii_str("MIRA-LP"))
+            Some(String::from_ascii_str(from_str_array(LP_TOKEN_SYMBOL)))
         } else {
             None
         }
