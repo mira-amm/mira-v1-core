@@ -69,6 +69,11 @@ pub fn validate_curve(
     );
 }
 
+/// The maximum protocol fee that might be set is 40% of the corresponding LP fee
+pub fn get_max_protocol_fee(lp_fee: u64) -> u64 {
+    lp_fee * 4 / 10
+}
+
 // Tests
 #[test]
 fn test_proportional_value() {
@@ -195,4 +200,18 @@ fn test_k_stable() {
 #[test(should_revert)]
 fn test_k_stable_reverts_on_overflow() {
     let _ = k(true, u64::max(), u64::max(), 0, 0);
+}
+
+#[test]
+fn test_get_max_protocol_fee() {
+    assert_eq(get_max_protocol_fee(1), 0);
+    assert_eq(get_max_protocol_fee(2), 0);
+    assert_eq(get_max_protocol_fee(3), 1);
+    assert_eq(get_max_protocol_fee(10), 4);
+    assert_eq(get_max_protocol_fee(100), 40);
+    assert_eq(get_max_protocol_fee(1000), 400);
+    assert_eq(get_max_protocol_fee(10000), 4000);
+    assert_eq(get_max_protocol_fee(333), 133);
+    assert_eq(get_max_protocol_fee(30), 12);
+    assert_eq(get_max_protocol_fee(5), 2);
 }

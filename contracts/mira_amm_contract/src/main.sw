@@ -34,7 +34,14 @@ use standards::{
 };
 use utils::utils::{build_lp_name, get_lp_asset, is_stable, validate_pool_id};
 use utils::src20_utils::get_symbol_and_decimals;
-use math::pool_math::{calculate_fee, initial_liquidity, min, proportional_value, validate_curve};
+use math::pool_math::{
+    calculate_fee,
+    get_max_protocol_fee,
+    initial_liquidity,
+    min,
+    proportional_value,
+    validate_curve,
+};
 use interfaces::{callee::IBaseCallee, hook::IBaseHook, mira_amm::MiraAMM};
 use interfaces::data_structures::{Asset, PoolId, PoolInfo, PoolMetadata,};
 use interfaces::errors::{AmmError, InputError};
@@ -436,7 +443,7 @@ impl MiraAMM for Contract {
         only_owner();
         // protocol fees cannot exceed 20% of the LP fees
         require(
-            volatile_fee <= LP_FEE_VOLATILE / 5 && stable_fee <= LP_FEE_STABLE / 5,
+            volatile_fee <= get_max_protocol_fee(LP_FEE_VOLATILE) && stable_fee <= get_max_protocol_fee(LP_FEE_STABLE),
             InputError::ProtocolFeesAreTooHigh,
         );
         storage.protocol_fees.write((volatile_fee, stable_fee));
