@@ -60,7 +60,13 @@ pub mod amm {
         pool_id: PoolId,
         to: Identity,
     ) -> CallResponse<Asset> {
-        contract.methods().mint(pool_id, to).call().await.unwrap()
+        contract
+            .methods()
+            .mint(pool_id, to)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .call()
+            .await
+            .unwrap()
     }
 
     pub async fn burn(

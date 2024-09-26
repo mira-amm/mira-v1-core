@@ -2,6 +2,8 @@ use fuels::{
     accounts::wallet::WalletUnlocked,
     types::{AssetId, Bits256, ContractId},
 };
+use test_harness::data_structures::MiraAMMContract;
+use test_harness::interface::mock::mint_tokens;
 use test_harness::{
     data_structures::WalletAssetConfiguration,
     interface::{
@@ -13,7 +15,7 @@ use test_harness::{
 };
 
 pub async fn setup() -> (
-    MiraAMM<WalletUnlocked>,
+    MiraAMMContract,
     WalletUnlocked,
     ContractId,
     MockToken<WalletUnlocked>,
@@ -37,8 +39,11 @@ pub async fn setup() -> (
         order_sub_ids((token_a_id, token_b_id), (token_a_sub_id, token_b_sub_id));
     let (token_a_id, token_b_id) = order_token_ids((token_a_id, token_b_id));
 
+    mint_tokens(&token_contract, token_a_id, 100_000).await;
+    mint_tokens(&token_contract, token_b_id, 100_000).await;
+
     (
-        amm.instance,
+        amm,
         wallet,
         token_contract_id,
         token_contract,

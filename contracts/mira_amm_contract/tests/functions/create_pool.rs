@@ -1,5 +1,5 @@
 mod success {
-
+    use test_harness::data_structures::MiraAMMContract;
     use test_harness::interface::amm::{create_pool, pool_metadata};
 
     use crate::utils::setup;
@@ -7,7 +7,7 @@ mod success {
     #[tokio::test]
     async fn creates_pool() {
         let (
-            amm,
+            MiraAMMContract { id: _, instance: amm },
             _wallet,
             token_contract_id,
             token_contract,
@@ -44,7 +44,7 @@ mod success {
     #[tokio::test]
     async fn creates_stable_pool() {
         let (
-            amm,
+            MiraAMMContract { id: _, instance: amm },
             _wallet,
             token_contract_id,
             token_contract,
@@ -80,6 +80,7 @@ mod success {
 }
 
 mod revert {
+    use test_harness::data_structures::MiraAMMContract;
     use test_harness::interface::amm::create_pool;
 
     use crate::utils::setup;
@@ -88,7 +89,7 @@ mod revert {
     #[should_panic(expected = "IdenticalAssets")]
     async fn fails_to_create_pool_with_identical_assets() {
         let (
-            amm,
+            MiraAMMContract { id: _, instance: amm },
             _wallet,
             token_contract_id,
             token_contract,
