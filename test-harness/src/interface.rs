@@ -99,7 +99,19 @@ pub mod amm {
         contract
             .methods()
             .swap(pool_id, amount_0_out, amount_1_out, to, data)
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .call()
+            .await
+            .unwrap()
+    }
+
+    pub async fn set_ownership(
+        contract: &MiraAMM<WalletUnlocked>,
+        new_owner: Identity,
+    ) -> CallResponse<()> {
+        contract
+            .methods()
+            .transfer_ownership(new_owner)
             .call()
             .await
             .unwrap()

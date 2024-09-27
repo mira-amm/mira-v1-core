@@ -13,15 +13,18 @@ use test_harness::{
     setup::common::{deploy_amm, setup_wallet_and_provider},
     utils::common::{order_sub_ids, order_token_ids},
 };
+use test_harness::interface::amm::set_ownership;
 
-pub async fn setup() -> (
+pub type Setup = (
     MiraAMMContract,
     WalletUnlocked,
     ContractId,
     MockToken<WalletUnlocked>,
     (AssetId, AssetId),
     (Bits256, Bits256),
-) {
+);
+
+pub async fn setup() -> Setup {
     let (wallet, _asset_ids, _provider) =
         setup_wallet_and_provider(&WalletAssetConfiguration::default()).await;
     let amm = deploy_amm(&wallet).await;
@@ -41,6 +44,8 @@ pub async fn setup() -> (
 
     mint_tokens(&token_contract, token_a_id, 100_000_000).await;
     mint_tokens(&token_contract, token_b_id, 100_000_000).await;
+
+    set_ownership(&amm.instance, wallet.address().into()).await;
 
     (
         amm,
