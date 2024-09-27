@@ -8,7 +8,7 @@ use test_harness::{
     data_structures::WalletAssetConfiguration,
     interface::{
         mock::{add_token, deploy_mock_token_contract, get_sub_id},
-        MiraAMM, MockToken,
+        MockToken,
     },
     setup::common::{deploy_amm, setup_wallet_and_provider},
     utils::common::{order_sub_ids, order_token_ids},
@@ -39,8 +39,8 @@ pub async fn setup() -> (
         order_sub_ids((token_a_id, token_b_id), (token_a_sub_id, token_b_sub_id));
     let (token_a_id, token_b_id) = order_token_ids((token_a_id, token_b_id));
 
-    mint_tokens(&token_contract, token_a_id, 100_000).await;
-    mint_tokens(&token_contract, token_b_id, 100_000).await;
+    mint_tokens(&token_contract, token_a_id, 100_000_000).await;
+    mint_tokens(&token_contract, token_b_id, 100_000_000).await;
 
     (
         amm,

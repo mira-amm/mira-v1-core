@@ -13,6 +13,7 @@ abigen!(
 
 pub mod amm {
     use fuels::prelude::VariableOutputPolicy;
+    use fuels::programs::calls::CallParameters;
     use fuels::programs::responses::CallResponse;
     use fuels::types::{Bits256, Bytes, ContractId, Identity};
 
@@ -73,8 +74,18 @@ pub mod amm {
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
         to: Identity,
+        lp_asset_id: AssetId,
+        amount: u64,
     ) -> CallResponse<(u64, u64)> {
-        contract.methods().burn(pool_id, to).call().await.unwrap()
+        let params = CallParameters::default().with_asset_id(lp_asset_id).with_amount(amount);
+        contract.methods()
+            .burn(pool_id, to)
+            .call_params(params)
+            .unwrap()
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .call()
+            .await
+            .unwrap()
     }
 
     pub async fn swap(

@@ -83,7 +83,7 @@ mod revert {
     #[should_panic(expected = "CannotAddLessThanMinimumLiquidity")]
     async fn test_no_liquidity() {
         let (
-            MiraAMMContract { id: amm_id, instance: amm },
+            MiraAMMContract { id: _, instance: amm },
             wallet,
             token_contract_id,
             token_contract,
