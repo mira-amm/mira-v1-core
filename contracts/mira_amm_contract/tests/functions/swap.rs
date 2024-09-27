@@ -42,7 +42,6 @@ mod success {
     use fuels::prelude::{TxPolicies, ViewOnlyAccount};
     use fuels::types::Identity;
     use test_harness::interface::amm::{pool_metadata, swap};
-    use test_harness::interface::Asset;
 
     #[tokio::test]
     async fn test_swap_volatile() {
@@ -131,7 +130,7 @@ mod success {
 mod revert {
     use crate::functions::swap::{setup_pool, empty_bytes};
     use crate::utils::setup;
-    use fuels::accounts::{Account, ViewOnlyAccount};
+    use fuels::accounts::Account;
     use fuels::prelude::TxPolicies;
     use fuels::types::Identity;
     use test_harness::data_structures::MiraAMMContract;
@@ -200,7 +199,7 @@ mod revert {
         let pool_id = setup_pool(&setup, true).await;
         let wallet = setup.1;
         let amm = setup.0;
-        let (token_0_id, token_1_id) = setup.4;
+        let (token_0_id, _) = setup.4;
         let to = Identity::from(wallet.address());
         let amm_address = amm.id.into();
         wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
