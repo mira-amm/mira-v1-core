@@ -205,7 +205,6 @@ mod revert {
         //burning all 10 LP tokens
         //expected_token_0 = 10 * 10201 / 1010 = 101
         //expected_token_1 = 10 * 100 / 1010 ~ 0.99 = 0 => revert with TransferZeroCoins
-        //TODO is it expected? Could we just transfer 1 token?
         burn(
             &amm,
             pool_id,
