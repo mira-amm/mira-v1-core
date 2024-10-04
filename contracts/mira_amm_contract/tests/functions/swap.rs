@@ -27,16 +27,24 @@ async fn setup_pool(setup: &Setup, stable_pool: bool) -> PoolId {
         *token_contract_id,
         *token_1_sub_id,
         stable_pool,
-    ).await.value;
+    )
+    .await
+    .value;
     let amm_address = amm_id.clone().into();
-    wallet.force_transfer_to_contract(&amm_address, 1_020_100, *token_0_id, TxPolicies::default()).await.unwrap();
-    wallet.force_transfer_to_contract(&amm_address, 10_000, *token_1_id, TxPolicies::default()).await.unwrap();
+    wallet
+        .force_transfer_to_contract(&amm_address, 1_020_100, *token_0_id, TxPolicies::default())
+        .await
+        .unwrap();
+    wallet
+        .force_transfer_to_contract(&amm_address, 10_000, *token_1_id, TxPolicies::default())
+        .await
+        .unwrap();
     mint(&amm, pool_id, wallet.address().into()).await.value;
     pool_id
 }
 
 mod success {
-    use crate::functions::swap::{setup_pool, empty_bytes};
+    use crate::functions::swap::{empty_bytes, setup_pool};
     use crate::utils::setup;
     use fuels::accounts::Account;
     use fuels::prelude::{TxPolicies, ViewOnlyAccount};
@@ -55,7 +63,10 @@ mod success {
 
         let pool_info = pool_metadata(&amm.instance, pool_id).await.value.unwrap();
 
-        wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
+        wallet
+            .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
+            .await
+            .unwrap();
         let wallet_0_balance = wallet.get_asset_balance(&token_0_id).await.unwrap();
         let wallet_1_balance = wallet.get_asset_balance(&token_1_id).await.unwrap();
         let requested_0 = 78;
@@ -71,18 +82,9 @@ mod success {
         );
 
         let last_pool_metadata = pool_metadata(&amm.instance, pool_id).await.value.unwrap();
-        assert_eq!(
-            last_pool_metadata.reserve_0,
-            pool_info.reserve_0 + 1000 - requested_0
-        );
-        assert_eq!(
-            last_pool_metadata.reserve_1,
-            pool_info.reserve_1 - requested_1
-        );
-        assert_eq!(
-            last_pool_metadata.liquidity,
-            pool_info.liquidity
-        );
+        assert_eq!(last_pool_metadata.reserve_0, pool_info.reserve_0 + 1000 - requested_0);
+        assert_eq!(last_pool_metadata.reserve_1, pool_info.reserve_1 - requested_1);
+        assert_eq!(last_pool_metadata.liquidity, pool_info.liquidity);
     }
 
     #[tokio::test]
@@ -97,38 +99,29 @@ mod success {
 
         let pool_info = pool_metadata(&amm.instance, pool_id).await.value.unwrap();
 
-        wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
+        wallet
+            .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
+            .await
+            .unwrap();
         let wallet_0_balance = wallet.get_asset_balance(&token_0_id).await.unwrap();
         let wallet_1_balance = wallet.get_asset_balance(&token_1_id).await.unwrap();
         let requested_1 = 29;
         swap(&amm.instance, pool_id, 0, requested_1, to, empty_bytes()).await;
-        assert_eq!(
-            wallet.get_asset_balance(&token_0_id).await.unwrap(),
-            wallet_0_balance
-        );
+        assert_eq!(wallet.get_asset_balance(&token_0_id).await.unwrap(), wallet_0_balance);
         assert_eq!(
             wallet.get_asset_balance(&token_1_id).await.unwrap(),
             wallet_1_balance + requested_1
         );
 
         let last_pool_metadata = pool_metadata(&amm.instance, pool_id).await.value.unwrap();
-        assert_eq!(
-            last_pool_metadata.reserve_0,
-            pool_info.reserve_0 + 1000
-        );
-        assert_eq!(
-            last_pool_metadata.reserve_1,
-            pool_info.reserve_1 - requested_1
-        );
-        assert_eq!(
-            last_pool_metadata.liquidity,
-            pool_info.liquidity
-        );
+        assert_eq!(last_pool_metadata.reserve_0, pool_info.reserve_0 + 1000);
+        assert_eq!(last_pool_metadata.reserve_1, pool_info.reserve_1 - requested_1);
+        assert_eq!(last_pool_metadata.liquidity, pool_info.liquidity);
     }
 }
 
 mod revert {
-    use crate::functions::swap::{setup_pool, empty_bytes};
+    use crate::functions::swap::{empty_bytes, setup_pool};
     use crate::utils::setup;
     use fuels::accounts::Account;
     use fuels::prelude::TxPolicies;
@@ -139,7 +132,7 @@ mod revert {
     #[tokio::test]
     #[should_panic(expected = "PoolDoesNotExist")]
     async fn test_no_pool() {
-        let (amm, wallet, _, _, (token_0_id, token_1_id), (_, _), ) = setup().await;
+        let (amm, wallet, _, _, (token_0_id, token_1_id), (_, _)) = setup().await;
         let pool_id = (token_0_id, token_1_id, false);
         let to = Identity::from(wallet.address());
         swap(&amm.instance, pool_id, 10, 10, to, empty_bytes()).await;
@@ -164,7 +157,9 @@ mod revert {
             token_contract_id,
             token_1_sub_id,
             false,
-        ).await.value;
+        )
+        .await
+        .value;
         let to = Identity::from(wallet.address());
         swap(&amm, pool_id, 10, 10, to, empty_bytes()).await;
     }
@@ -188,7 +183,10 @@ mod revert {
         let (token_0_id, _token_1_id) = setup.4;
         let to = Identity::from(wallet.address());
         let amm_address = amm.id.into();
-        wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
+        wallet
+            .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
+            .await
+            .unwrap();
         swap(&amm.instance, pool_id, 0, 10, to, empty_bytes()).await;
     }
 
@@ -202,7 +200,10 @@ mod revert {
         let (token_0_id, _) = setup.4;
         let to = Identity::from(wallet.address());
         let amm_address = amm.id.into();
-        wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
+        wallet
+            .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
+            .await
+            .unwrap();
         swap(&amm.instance, pool_id, 0, 30, to, empty_bytes()).await;
     }
 
@@ -216,7 +217,10 @@ mod revert {
         let (token_0_id, _) = setup.4;
         let to = Identity::from(wallet.address());
         let amm_address = amm.id.into();
-        wallet.force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default()).await.unwrap();
+        wallet
+            .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
+            .await
+            .unwrap();
         swap(&amm.instance, pool_id, 0, 10_000, to, empty_bytes()).await;
     }
 }

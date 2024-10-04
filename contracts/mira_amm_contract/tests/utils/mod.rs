@@ -3,6 +3,7 @@ use fuels::{
     types::{AssetId, Bits256, ContractId},
 };
 use test_harness::data_structures::MiraAMMContract;
+use test_harness::interface::amm::set_ownership;
 use test_harness::interface::mock::mint_tokens;
 use test_harness::{
     data_structures::WalletAssetConfiguration,
@@ -13,7 +14,6 @@ use test_harness::{
     setup::common::{deploy_amm, setup_wallet_and_provider},
     utils::common::{order_sub_ids, order_token_ids},
 };
-use test_harness::interface::amm::set_ownership;
 
 pub type Setup = (
     MiraAMMContract,
