@@ -420,7 +420,11 @@ impl MiraAMM for Contract {
 
         initialize_pool(pool_id, decimals_0, decimals_1, lp_name);
 
-        log(CreatePoolEvent { pool_id, decimals_0, decimals_1 });
+        log(CreatePoolEvent {
+            pool_id,
+            decimals_0,
+            decimals_1,
+        });
         pool_id
     }
 

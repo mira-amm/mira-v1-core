@@ -13,6 +13,7 @@ abigen!(
 
 pub mod amm {
     use fuels::prelude::VariableOutputPolicy;
+    use fuels::programs::calls::CallParameters;
     use fuels::programs::responses::CallResponse;
     use fuels::types::{Bits256, Bytes, ContractId, Identity};
 
@@ -60,15 +61,32 @@ pub mod amm {
         pool_id: PoolId,
         to: Identity,
     ) -> CallResponse<Asset> {
-        contract.methods().mint(pool_id, to).call().await.unwrap()
+        contract
+            .methods()
+            .mint(pool_id, to)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .call()
+            .await
+            .unwrap()
     }
 
     pub async fn burn(
         contract: &MiraAMM<WalletUnlocked>,
         pool_id: PoolId,
         to: Identity,
+        lp_asset_id: AssetId,
+        amount: u64,
     ) -> CallResponse<(u64, u64)> {
-        contract.methods().burn(pool_id, to).call().await.unwrap()
+        let params = CallParameters::default().with_asset_id(lp_asset_id).with_amount(amount);
+        contract
+            .methods()
+            .burn(pool_id, to)
+            .call_params(params)
+            .unwrap()
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .call()
+            .await
+            .unwrap()
     }
 
     pub async fn swap(
@@ -82,10 +100,17 @@ pub mod amm {
         contract
             .methods()
             .swap(pool_id, amount_0_out, amount_1_out, to, data)
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
             .call()
             .await
             .unwrap()
+    }
+
+    pub async fn set_ownership(
+        contract: &MiraAMM<WalletUnlocked>,
+        new_owner: Identity,
+    ) -> CallResponse<()> {
+        contract.methods().transfer_ownership(new_owner).call().await.unwrap()
     }
 }
 
