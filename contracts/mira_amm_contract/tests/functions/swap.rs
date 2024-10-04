@@ -1,14 +1,9 @@
 use crate::utils::Setup;
 use fuels::accounts::Account;
 use fuels::prelude::TxPolicies;
-use fuels::types::Bytes;
 use test_harness::data_structures::MiraAMMContract;
 use test_harness::interface::amm::{create_pool, mint};
 use test_harness::types::PoolId;
-
-fn empty_bytes() -> Bytes {
-    Bytes(Vec::new())
-}
 
 async fn setup_pool(setup: &Setup, stable_pool: bool) -> PoolId {
     let (
@@ -44,7 +39,7 @@ async fn setup_pool(setup: &Setup, stable_pool: bool) -> PoolId {
 }
 
 mod success {
-    use crate::functions::swap::{empty_bytes, setup_pool};
+    use crate::functions::swap::setup_pool;
     use crate::utils::setup;
     use fuels::accounts::Account;
     use fuels::prelude::{TxPolicies, ViewOnlyAccount};
@@ -71,7 +66,7 @@ mod success {
         let wallet_1_balance = wallet.get_asset_balance(&token_1_id).await.unwrap();
         let requested_0 = 78;
         let requested_1 = 9;
-        swap(&amm.instance, pool_id, requested_0, requested_1, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, requested_0, requested_1, to, None).await;
         assert_eq!(
             wallet.get_asset_balance(&token_0_id).await.unwrap(),
             wallet_0_balance + requested_0
@@ -106,7 +101,7 @@ mod success {
         let wallet_0_balance = wallet.get_asset_balance(&token_0_id).await.unwrap();
         let wallet_1_balance = wallet.get_asset_balance(&token_1_id).await.unwrap();
         let requested_1 = 29;
-        swap(&amm.instance, pool_id, 0, requested_1, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, 0, requested_1, to, None).await;
         assert_eq!(wallet.get_asset_balance(&token_0_id).await.unwrap(), wallet_0_balance);
         assert_eq!(
             wallet.get_asset_balance(&token_1_id).await.unwrap(),
@@ -121,7 +116,7 @@ mod success {
 }
 
 mod revert {
-    use crate::functions::swap::{empty_bytes, setup_pool};
+    use crate::functions::swap::setup_pool;
     use crate::utils::setup;
     use fuels::accounts::Account;
     use fuels::prelude::TxPolicies;
@@ -135,7 +130,7 @@ mod revert {
         let (amm, wallet, _, _, (token_0_id, token_1_id), (_, _)) = setup().await;
         let pool_id = (token_0_id, token_1_id, false);
         let to = Identity::from(wallet.address());
-        swap(&amm.instance, pool_id, 10, 10, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, 10, 10, to, None).await;
     }
 
     #[tokio::test]
@@ -161,7 +156,7 @@ mod revert {
         .await
         .value;
         let to = Identity::from(wallet.address());
-        swap(&amm, pool_id, 10, 10, to, empty_bytes()).await;
+        swap(&amm, pool_id, 10, 10, to, None).await;
     }
 
     #[tokio::test]
@@ -170,7 +165,7 @@ mod revert {
         let setup = setup().await;
         let pool_id = setup_pool(&setup, false).await;
         let to = Identity::from(setup.1.address());
-        swap(&setup.0.instance, pool_id, 0, 15, to, empty_bytes()).await;
+        swap(&setup.0.instance, pool_id, 0, 15, to, None).await;
     }
 
     #[tokio::test]
@@ -187,7 +182,7 @@ mod revert {
             .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
             .await
             .unwrap();
-        swap(&amm.instance, pool_id, 0, 10, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, 0, 10, to, None).await;
     }
 
     #[tokio::test]
@@ -204,7 +199,7 @@ mod revert {
             .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
             .await
             .unwrap();
-        swap(&amm.instance, pool_id, 0, 30, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, 0, 30, to, None).await;
     }
 
     #[tokio::test]
@@ -221,6 +216,6 @@ mod revert {
             .force_transfer_to_contract(&amm_address, 1000, token_0_id, TxPolicies::default())
             .await
             .unwrap();
-        swap(&amm.instance, pool_id, 0, 10_000, to, empty_bytes()).await;
+        swap(&amm.instance, pool_id, 0, 10_000, to, None).await;
     }
 }

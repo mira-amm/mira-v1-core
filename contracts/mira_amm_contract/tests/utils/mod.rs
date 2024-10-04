@@ -1,3 +1,5 @@
+use fuels::prelude::Address;
+use fuels::types::Identity;
 use fuels::{
     accounts::wallet::WalletUnlocked,
     types::{AssetId, Bits256, ContractId},
@@ -45,7 +47,7 @@ pub async fn setup() -> Setup {
     mint_tokens(&token_contract, token_a_id, 100_000_000).await;
     mint_tokens(&token_contract, token_b_id, 100_000_000).await;
 
-    set_ownership(&amm.instance, wallet.address().into()).await;
+    set_ownership(&amm.instance, Identity::Address(Address::default())).await;
 
     (
         amm,
