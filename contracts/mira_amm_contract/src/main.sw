@@ -9,7 +9,6 @@ use std::{
     },
     bytes::Bytes,
     call_frames::msg_asset_id,
-    constants::ZERO_B256,
     context::{
         msg_amount,
         this_balance,
@@ -477,7 +476,7 @@ impl MiraAMM for Contract {
         let added_liquidity: u64 = if total_liquidity == 0 {
             let _ = mint_lp_asset(
                 pool_id,
-                Identity::Address(Address::from(ZERO_B256)),
+                get_fee_recipient().unwrap(),
                 MINIMUM_LIQUIDITY,
             );
             let init_liquidity = initial_liquidity(asset_0_in, asset_1_in);
