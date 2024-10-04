@@ -1,6 +1,6 @@
 library;
 
-/// (asset_0, asset_1, is_stable)
+/// Represents the id of a pool. Consists of: asset_0, asset_1, is_stable flag
 pub type PoolId = (AssetId, AssetId, bool);
 
 pub struct Asset {

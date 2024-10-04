@@ -56,9 +56,10 @@ use sway_libs::{
     reentrancy::reentrancy_guard,
 };
 
-// 0,3%, 0,05% respectively, in basis points
 configurable {
+    /// Liquidity provider fee for volatile pools. 0,3%, in basis points
     LP_FEE_VOLATILE: u64 = 30,
+    /// Liquidity provider fee for stable pools. 0,05%, in basis points
     LP_FEE_STABLE: u64 = 5,
 }
 
