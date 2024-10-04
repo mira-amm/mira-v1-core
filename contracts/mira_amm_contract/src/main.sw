@@ -404,9 +404,9 @@ impl MiraAMM for Contract {
     #[storage(read, write)]
     fn create_pool(
         token_0_contract_id: ContractId,
-        token_0_sub_id: b256,
+        token_0_sub_id: SubId,
         token_1_contract_id: ContractId,
-        token_1_sub_id: b256,
+        token_1_sub_id: SubId,
         is_stable: bool,
     ) -> PoolId {
         reentrancy_guard();

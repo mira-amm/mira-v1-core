@@ -22,7 +22,7 @@ pub fn validate_pool_id(pool_id: PoolId) {
 }
 
 /// Builds and returns an LP sub id and asset id for the provided pool id
-pub fn get_lp_asset(pool_id: PoolId) -> (b256, AssetId) {
+pub fn get_lp_asset(pool_id: PoolId) -> (SubId, AssetId) {
     validate_pool_id(pool_id);
     let lp_sub_id = sha256(pool_id);
     (lp_sub_id, AssetId::new(ContractId::this(), lp_sub_id))

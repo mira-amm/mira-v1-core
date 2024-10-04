@@ -19,7 +19,7 @@ storage {
     asset_name: StorageMap<AssetId, StorageString> = StorageMap {},
     asset_symbol: StorageMap<AssetId, StorageString> = StorageMap {},
     asset_decimals: StorageMap<AssetId, u8> = StorageMap {},
-    asset_sub_id: StorageMap<AssetId, b256> = StorageMap {},
+    asset_sub_id: StorageMap<AssetId, SubId> = StorageMap {},
 }
 
 impl SRC20 for Contract {
@@ -55,7 +55,7 @@ abi MockToken {
     #[storage(read, write)]
     fn mint_tokens(asset_id: AssetId, amount: u64);
     #[storage(read)]
-    fn get_sub_id(asset_id: AssetId) -> Option<b256>;
+    fn get_sub_id(asset_id: AssetId) -> Option<SubId>;
 }
 
 impl MockToken for Contract {
@@ -63,7 +63,7 @@ impl MockToken for Contract {
     fn add_token(name: String, symbol: String, decimals: u8) -> AssetId {
         let total_assets = storage.total_assets.read();
         let total_assets_u256: u256 = total_assets.into();
-        let sub_id: b256 = total_assets_u256.into();
+        let sub_id: SubId = total_assets_u256.into();
         let asset_id = AssetId::new(ContractId::this(), sub_id);
         storage.total_assets.write(total_assets + 1);
 
@@ -84,7 +84,7 @@ impl MockToken for Contract {
     }
 
     #[storage(read)]
-    fn get_sub_id(asset_id: AssetId) -> Option<b256> {
+    fn get_sub_id(asset_id: AssetId) -> Option<SubId> {
         storage.asset_sub_id.get(asset_id).try_read()
     }
 }
