@@ -78,7 +78,8 @@ pub mod amm {
         amount: u64,
     ) -> CallResponse<(u64, u64)> {
         let params = CallParameters::default().with_asset_id(lp_asset_id).with_amount(amount);
-        contract.methods()
+        contract
+            .methods()
             .burn(pool_id, to)
             .call_params(params)
             .unwrap()
@@ -109,12 +110,7 @@ pub mod amm {
         contract: &MiraAMM<WalletUnlocked>,
         new_owner: Identity,
     ) -> CallResponse<()> {
-        contract
-            .methods()
-            .transfer_ownership(new_owner)
-            .call()
-            .await
-            .unwrap()
+        contract.methods().transfer_ownership(new_owner).call().await.unwrap()
     }
 }
 
