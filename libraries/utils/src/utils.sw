@@ -30,19 +30,11 @@ pub fn get_lp_asset(pool_id: PoolId) -> (SubId, AssetId) {
 
 pub fn build_lp_name(symbol_0: String, symbol_1: String) -> String {
     let mut result = Bytes::new();
-    push_bytes(result, symbol_0.as_bytes());
-    push_bytes(result, String::from_ascii_str("-").as_bytes());
-    push_bytes(result, symbol_1.as_bytes());
-    push_bytes(result, String::from_ascii_str(" LP").as_bytes());
+    result.append(symbol_0.as_bytes());
+    result.append(String::from_ascii_str("-").as_bytes());
+    result.append(symbol_1.as_bytes());
+    result.append(String::from_ascii_str(" LP").as_bytes());
     String::from_ascii(result)
-}
-
-fn push_bytes(ref mut a: Bytes, b: Bytes) {
-    let mut i = 0;
-    while i < b.len() {
-        a.push(b.get(i).unwrap());
-        i = i + 1;
-    }
 }
 
 #[test]
