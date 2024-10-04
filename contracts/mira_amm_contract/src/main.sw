@@ -125,7 +125,8 @@ fn get_pool_option(pool_id: PoolId) -> Option<PoolInfo> {
 #[storage(read)]
 fn get_pool(pool_id: PoolId) -> PoolInfo {
     let pool = get_pool_option(pool_id);
-    pool.expect(InputError::PoolDoesNotExist(pool_id))
+    require(pool.is_some(), InputError::PoolDoesNotExist(pool_id));
+    pool.unwrap()
 }
 
 #[storage(read)]
