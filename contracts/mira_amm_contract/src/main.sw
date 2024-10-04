@@ -464,7 +464,6 @@ impl MiraAMM for Contract {
         get_hook()
     }
 
-    #[payable]
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset {
         reentrancy_guard();
