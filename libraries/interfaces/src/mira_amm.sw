@@ -42,7 +42,7 @@ abi MiraAMM {
         amount_0_out: u64,
         amount_1_out: u64,
         to: Identity,
-        data: Bytes,
+        data: Option<Bytes>,
     );
 
     #[storage(read, write)]

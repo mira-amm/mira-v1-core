@@ -554,7 +554,7 @@ impl MiraAMM for Contract {
         asset_0_out: u64,
         asset_1_out: u64,
         to: Identity,
-        data: Bytes,
+        data: Option<Bytes>,
     ) {
         reentrancy_guard();
         let mut pool = get_pool(pool_id);
@@ -569,12 +569,12 @@ impl MiraAMM for Contract {
         // Optimistically transfer assets
         transfer_assets(pool_id, to, asset_0_out, asset_1_out);
 
-        if data.len() > 0 {
+        if let Some(d) = data {
             abi(IBaseCallee, to
                 .as_contract_id()
                 .unwrap()
                 .into())
-                .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, data);
+                .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, d);
         }
 
         let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out, to);
