@@ -475,11 +475,7 @@ impl MiraAMM for Contract {
         let total_liquidity = get_pool_liquidity(pool_id).amount;
 
         let added_liquidity: u64 = if total_liquidity == 0 {
-            let _ = mint_lp_asset(
-                pool_id,
-                get_fee_recipient().unwrap(),
-                MINIMUM_LIQUIDITY,
-            );
+            let _ = mint_lp_asset(pool_id, get_fee_recipient().unwrap(), MINIMUM_LIQUIDITY);
             let init_liquidity = initial_liquidity(asset_0_in, asset_1_in);
             require(
                 init_liquidity > MINIMUM_LIQUIDITY,
