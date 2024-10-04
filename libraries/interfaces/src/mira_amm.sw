@@ -7,9 +7,9 @@ abi MiraAMM {
     #[storage(read, write)]
     fn create_pool(
         token_0_contract_id: ContractId,
-        token_0_sub_id: b256,
+        token_0_sub_id: SubId,
         token_1_contract_id: ContractId,
-        token_1_sub_id: b256,
+        token_1_sub_id: SubId,
         is_stable: bool,
     ) -> PoolId;
 
@@ -42,7 +42,7 @@ abi MiraAMM {
         amount_0_out: u64,
         amount_1_out: u64,
         to: Identity,
-        data: Bytes,
+        data: Option<Bytes>,
     );
 
     #[storage(read, write)]

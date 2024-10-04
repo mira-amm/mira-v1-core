@@ -9,7 +9,6 @@ use std::{
     },
     bytes::Bytes,
     call_frames::msg_asset_id,
-    constants::ZERO_B256,
     context::{
         msg_amount,
         this_balance,
@@ -56,9 +55,10 @@ use sway_libs::{
     reentrancy::reentrancy_guard,
 };
 
-// 0,3%, 0,05% respectively, in basis points
 configurable {
+    /// Liquidity provider fee for volatile pools. 0,3%, in basis points
     LP_FEE_VOLATILE: u64 = 30,
+    /// Liquidity provider fee for stable pools. 0,05%, in basis points
     LP_FEE_STABLE: u64 = 5,
 }
 
@@ -404,9 +404,9 @@ impl MiraAMM for Contract {
     #[storage(read, write)]
     fn create_pool(
         token_0_contract_id: ContractId,
-        token_0_sub_id: b256,
+        token_0_sub_id: SubId,
         token_1_contract_id: ContractId,
-        token_1_sub_id: b256,
+        token_1_sub_id: SubId,
         is_stable: bool,
     ) -> PoolId {
         reentrancy_guard();
@@ -475,11 +475,7 @@ impl MiraAMM for Contract {
         let total_liquidity = get_pool_liquidity(pool_id).amount;
 
         let added_liquidity: u64 = if total_liquidity == 0 {
-            let _ = mint_lp_asset(
-                pool_id,
-                Identity::Address(Address::from(ZERO_B256)),
-                MINIMUM_LIQUIDITY,
-            );
+            let _ = mint_lp_asset(pool_id, get_fee_recipient().unwrap(), MINIMUM_LIQUIDITY);
             let init_liquidity = initial_liquidity(asset_0_in, asset_1_in);
             require(
                 init_liquidity > MINIMUM_LIQUIDITY,
@@ -555,7 +551,7 @@ impl MiraAMM for Contract {
         asset_0_out: u64,
         asset_1_out: u64,
         to: Identity,
-        data: Bytes,
+        data: Option<Bytes>,
     ) {
         reentrancy_guard();
         let mut pool = get_pool(pool_id);
@@ -570,12 +566,12 @@ impl MiraAMM for Contract {
         // Optimistically transfer assets
         transfer_assets(pool_id, to, asset_0_out, asset_1_out);
 
-        if data.len() > 0 {
+        if let Some(d) = data {
             abi(IBaseCallee, to
                 .as_contract_id()
                 .unwrap()
                 .into())
-                .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, data);
+                .hook(msg_sender().unwrap(), asset_0_out, asset_1_out, d);
         }
 
         let (balance_0, asset_0_in) = get_amount_in_accounting_out(pool_id.0, asset_0_out, to);
