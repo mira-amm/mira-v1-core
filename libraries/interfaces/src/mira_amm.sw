@@ -28,6 +28,7 @@ abi MiraAMM {
     #[storage(read)]
     fn hook() -> Option<ContractId>;
 
+    #[payable]
     #[storage(read, write)]
     fn mint(pool_id: PoolId, to: Identity) -> Asset;
 
