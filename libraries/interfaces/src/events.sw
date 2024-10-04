@@ -4,6 +4,8 @@ use ::data_structures::{Asset, PoolId};
 
 pub struct CreatePoolEvent {
     pub pool_id: PoolId,
+    pub decimals_0: u8,
+    pub decimals_1: u8,
 }
 
 pub struct MintEvent {
