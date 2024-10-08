@@ -26,6 +26,10 @@ pub enum InputError {
     ProtocolFeesAreTooHigh: (),
     /// Pool invariant violation.
     PoolInvariantViolation: (u64, u64),
+    /// Asset symbol is not set.
+    AssetSymbolNotSet: AssetId,
+    /// Asset decimals not set.
+    AssetDecimalsNotSet: AssetId,
 }
 
 /// Errors related to AMM logic.
