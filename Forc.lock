@@ -16,16 +16,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mira-fire-hook"
-source = "member"
-dependencies = [
-    "interfaces",
-    "math",
-    "std",
-    "utils",
-]
-
-[[package]]
 name = "mira_amm_contract"
 source = "member"
 dependencies = [
@@ -34,6 +24,16 @@ dependencies = [
     "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.1#792639cdf391565e6e6a02482ea8a46d9604a6f5",
     "std",
     "sway_libs",
+    "utils",
+]
+
+[[package]]
+name = "mira_validation_hook"
+source = "member"
+dependencies = [
+    "interfaces",
+    "math",
+    "std",
     "utils",
 ]
 

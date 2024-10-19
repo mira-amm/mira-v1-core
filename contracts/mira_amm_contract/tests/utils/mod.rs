@@ -1,12 +1,12 @@
-use fuels::prelude::Address;
 use fuels::types::Identity;
 use fuels::{
     accounts::wallet::WalletUnlocked,
     types::{AssetId, Bits256, ContractId},
 };
 use test_harness::data_structures::MiraAMMContract;
-use test_harness::interface::amm::set_ownership;
+use test_harness::interface::amm::{set_hook, set_ownership};
 use test_harness::interface::mock::mint_tokens;
+use test_harness::setup::common::deploy_validation_hook;
 use test_harness::{
     data_structures::WalletAssetConfiguration,
     interface::{
@@ -55,7 +55,9 @@ pub async fn setup() -> Setup {
     mint_tokens(&token_contract, token_a_id, 100_000_000).await;
     mint_tokens(&token_contract, token_b_id, 100_000_000).await;
 
-    set_ownership(&amm.instance, Identity::Address(Address::default())).await;
+    set_ownership(&amm.instance, Identity::Address(wallet.address().into())).await;
+    let hook_id = deploy_validation_hook(&wallet, amm.id.clone().into()).await;
+    set_hook(&amm.instance, Some(hook_id.into())).await;
 
     (
         amm,
@@ -95,7 +97,9 @@ pub async fn setup_multipool() -> Setup2 {
     mint_tokens(&token_contract, token_b_id, 100_000_000).await;
     mint_tokens(&token_contract, token_c_id, 100_000_000).await;
 
-    set_ownership(&amm.instance, Identity::Address(Address::default())).await;
+    set_ownership(&amm.instance, Identity::Address(wallet.address().into())).await;
+    let hook_id = deploy_validation_hook(&wallet, amm.id.clone().into()).await;
+    set_hook(&amm.instance, Some(hook_id.into())).await;
 
     (
         amm,

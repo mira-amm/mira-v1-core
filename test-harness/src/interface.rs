@@ -6,13 +6,17 @@ abigen!(
         abi = "./contracts/mira_amm_contract/out/debug/mira_amm_contract-abi.json"
     ),
     Contract(
+        name = "ValidationHook",
+        abi = "./contracts/mira_validation_hook/out/debug/mira_validation_hook-abi.json"
+    ),
+    Contract(
         name = "MockToken",
         abi = "./contracts/mocks/mock_token/out/debug/mock_token-abi.json"
     )
 );
 
 pub mod amm {
-    use fuels::prelude::VariableOutputPolicy;
+    use fuels::prelude::{Bech32ContractId, VariableOutputPolicy};
     use fuels::programs::calls::CallParameters;
     use fuels::programs::responses::CallResponse;
     use fuels::types::{Bits256, Bytes, ContractId, Identity};
@@ -111,6 +115,13 @@ pub mod amm {
         new_owner: Identity,
     ) -> CallResponse<()> {
         contract.methods().transfer_ownership(new_owner).call().await.unwrap()
+    }
+
+    pub async fn set_hook(
+        contract: &MiraAMM<WalletUnlocked>,
+        hook_id: Option<ContractId>,
+    ) -> CallResponse<()> {
+        contract.methods().set_hook(hook_id).call().await.unwrap()
     }
 }
 

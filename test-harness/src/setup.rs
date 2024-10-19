@@ -2,13 +2,30 @@ use fuels::prelude::{AssetId, Contract, LoadConfiguration, Provider, TxPolicies,
 
 pub mod common {
     use super::*;
+    use fuels::prelude::Bech32ContractId;
     use fuels::test_helpers::{setup_multiple_assets_coins, setup_test_provider};
 
     use crate::{
         data_structures::{MiraAMMContract, WalletAssetConfiguration},
-        interface::MiraAMM,
-        paths::AMM_CONTRACT_BINARY_PATH,
+        interface::{MiraAMM, ValidationHookConfigurables},
+        paths::{AMM_CONTRACT_BINARY_PATH, HOOK_CONTRACT_BINARY_PATH},
     };
+
+    pub async fn deploy_validation_hook(wallet: &WalletUnlocked, amm_id: Bech32ContractId) -> Bech32ContractId {
+        let configurables = ValidationHookConfigurables::default()
+            .with_AMM_CONTRACT_ID(amm_id.into())
+            .unwrap();
+        let configuration = LoadConfiguration::default()
+            .with_configurables(configurables);
+
+        let contract_id = Contract::load_from(HOOK_CONTRACT_BINARY_PATH, configuration)
+            .unwrap()
+            .deploy(wallet, TxPolicies::default())
+            .await
+            .unwrap();
+
+        contract_id
+    }
 
     pub async fn deploy_amm(wallet: &WalletUnlocked) -> MiraAMMContract {
         let configuration = LoadConfiguration::default();

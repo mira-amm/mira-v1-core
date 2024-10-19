@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "./contracts/mira_amm_contract",
-  "./contracts/hook",
+  "./contracts/mira_validation_hook",
   "./contracts/mocks/mock_token",
   "./libraries/interfaces",
   "./libraries/utils",
