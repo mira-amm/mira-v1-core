@@ -16,6 +16,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mira-fire-hook"
+source = "member"
+dependencies = [
+    "interfaces",
+    "math",
+    "std",
+    "utils",
+]
+
+[[package]]
 name = "mira_amm_contract"
 source = "member"
 dependencies = [
