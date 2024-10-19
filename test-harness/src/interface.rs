@@ -69,6 +69,9 @@ pub mod amm {
             .methods()
             .mint(pool_id, to)
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
@@ -88,6 +91,9 @@ pub mod amm {
             .call_params(params)
             .unwrap()
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
@@ -105,6 +111,9 @@ pub mod amm {
             .methods()
             .swap(pool_id, amount_0_out, amount_1_out, to, data)
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
