@@ -591,17 +591,15 @@ impl MiraAMM for Contract {
             protocol_fee_1,
         );
 
-        let (reserve_0, reserve_1) = get_reserves(pool_id);
-
         let asset_0_in_adjusted = asset_0_in - protocol_fee_0;
         let asset_1_in_adjusted = asset_1_in - protocol_fee_1;
-        let reserve_0_adjusted = reserve_0 - lp_fee_0 - protocol_fee_0;
-        let reserve_1_adjusted = reserve_1 - lp_fee_1 - protocol_fee_1;
+        let balance_0_adjusted = balance_0 - lp_fee_0 - protocol_fee_0;
+        let balance_1_adjusted = balance_1 - lp_fee_1 - protocol_fee_1;
 
         validate_curve(
             is_stable(pool_id),
-            reserve_0_adjusted,
-            reserve_1_adjusted,
+            balance_0_adjusted,
+            balance_1_adjusted,
             pool.reserve_0,
             pool.reserve_1,
             pool.decimals_0,
