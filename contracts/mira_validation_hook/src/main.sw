@@ -97,6 +97,28 @@ impl IBaseHook for Contract {
     }
 }
 
+fn run_test_cases(cases: Vec<(bool, u64, u64, u64, u64, u64, u64, u8, u8)>, fees: Option<(u64, u64)>) {
+    let (lp_fee, protocol_fee) = fees.unwrap_or((30, 0));
+    let mut i = 0;
+    while i < cases.len() {
+        let (is_stable, res_0, res_1, input_0, input_1, output_0, output_1, dec_0, dec_1) = cases.get(i).unwrap();
+        post_validate_curve(
+            is_stable,
+            res_0,
+            res_1,
+            dec_0,
+            dec_1,
+            input_0,
+            input_1,
+            output_0,
+            output_1,
+            lp_fee,
+            protocol_fee,
+        );
+        i = i + 1;
+    }
+}
+
 #[test]
 fn test_post_validate_curve_volatile() {
     // is_stable, res_0, res_1, input_0, input_1, output_0, output_1, dec_0, dec_1
@@ -104,7 +126,7 @@ fn test_post_validate_curve_volatile() {
 
     // volatile pool, same decimals
     // 990 * 1001 (990_990) < (1000 - 1) * 1000 (999_000)
-    test_cases.push((false, 1000, 1000, 10, 0, 1, 0, 6, 6));
+    test_cases.push((false, 1000, 1000, 10, 0, 0, 1, 6, 6));
     // 990 * 1009 (998_910) < (1000 - 1) * 1000 (999_000)
     test_cases.push((false, 1000, 1000, 10, 0, 0, 9, 6, 6));
     // 998_996 * 1002 (1_000_993_992) < (999_999 - 3) * 1001 (1_000_995_996)
@@ -122,24 +144,7 @@ fn test_post_validate_curve_volatile() {
     // 998_996_989 * 1_002_000 (1_000_994_982_978_000) < (999_999_999 - 3009) * 1_001_000 (1_000_996_986_990_000)
     test_cases.push((false, 999_999_999, 1_001_000, 1_003_010, 0, 0, 1000, 5, 4));
 
-    let mut i = 0;
-    while i < test_cases.len() {
-        let (is_stable, res_0, res_1, input_0, input_1, output_0, output_1, dec_0, dec_1) = test_cases.get(i).unwrap();
-        post_validate_curve(
-            is_stable,
-            res_0,
-            res_1,
-            dec_0,
-            dec_1,
-            input_0,
-            input_1,
-            output_0,
-            output_1,
-            30,
-            0,
-        );
-        i = i + 1;
-    }
+    run_test_cases(test_cases, None);
 }
 
 #[test(should_revert)]
@@ -152,22 +157,17 @@ fn test_post_validate_curve_volatile_failure() {
     // 990 * 1010 (999_900) < (1000 - 1) * 1000 (999_000) VIOLATION
     test_cases.push((false, 1000, 1000, 10, 0, 0, 10, 6, 6));
 
-    let mut i = 0;
-    while i < test_cases.len() {
-        let (is_stable, res_0, res_1, input_0, input_1, output_0, output_1, dec_0, dec_1) = test_cases.get(i).unwrap();
-        post_validate_curve(
-            is_stable,
-            res_0,
-            res_1,
-            dec_0,
-            dec_1,
-            input_0,
-            input_1,
-            output_0,
-            output_1,
-            30,
-            0,
-        );
-        i = i + 1;
-    }
+    run_test_cases(test_cases, None);
+}
+
+#[test]
+fn test_protocol_fee_calculation() {
+    // is_stable, res_0, res_1, input_0, input_1, output_0, output_1, dec_0, dec_1
+    let mut test_cases: Vec<(bool, u64, u64, u64, u64, u64, u64, u8, u8)> = Vec::new();
+
+    // current reserves: 10000, 10000
+    // previous reserves: 9010, 11098, 10 - protocol fee
+    test_cases.push((false, 10000, 10000, 1000, 0, 0, 1098, 6, 6));
+
+    run_test_cases(test_cases, Some((0, 100))); // 1% protocol fee
 }
