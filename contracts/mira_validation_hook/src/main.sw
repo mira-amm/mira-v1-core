@@ -97,7 +97,10 @@ impl IBaseHook for Contract {
     }
 }
 
-fn run_test_cases(cases: Vec<(bool, u64, u64, u64, u64, u64, u64, u8, u8)>, fees: Option<(u64, u64)>) {
+fn run_test_cases(
+    cases: Vec<(bool, u64, u64, u64, u64, u64, u64, u8, u8)>,
+    fees: Option<(u64, u64)>,
+) {
     let (lp_fee, protocol_fee) = fees.unwrap_or((30, 0));
     let mut i = 0;
     while i < cases.len() {
