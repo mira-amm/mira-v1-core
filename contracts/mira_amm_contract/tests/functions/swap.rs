@@ -237,7 +237,8 @@ mod revert {
             &setup.4.get(0).unwrap().1,
             &setup.4.get(1).unwrap().1,
             false,
-        ).await;
+        )
+        .await;
         let pool_id_b = setup_pool_2(
             &setup,
             &setup.4.get(1).unwrap().0,
@@ -245,7 +246,8 @@ mod revert {
             &setup.4.get(1).unwrap().1,
             &setup.4.get(2).unwrap().1,
             false,
-        ).await;
+        )
+        .await;
 
         let wallet = setup.1;
         let amm = setup.0;
@@ -253,7 +255,12 @@ mod revert {
         let to = Identity::from(wallet.address());
         let amm_address = amm.id.into();
         wallet
-            .force_transfer_to_contract(&amm_address, 1000, setup.4.get(0).unwrap().0, TxPolicies::default())
+            .force_transfer_to_contract(
+                &amm_address,
+                1000,
+                setup.4.get(0).unwrap().0,
+                TxPolicies::default(),
+            )
             .await
             .unwrap();
         swap(&amm.instance, pool_id_a, 0, 10, to, None).await;

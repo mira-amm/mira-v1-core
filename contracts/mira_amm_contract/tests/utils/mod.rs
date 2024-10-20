@@ -1,9 +1,9 @@
+use fuels::prelude::Address;
 use fuels::types::Identity;
 use fuels::{
     accounts::wallet::WalletUnlocked,
     types::{AssetId, Bits256, ContractId},
 };
-use fuels::prelude::Address;
 use test_harness::data_structures::MiraAMMContract;
 use test_harness::interface::amm::{set_hook, set_ownership};
 use test_harness::interface::mock::mint_tokens;
@@ -104,11 +104,5 @@ pub async fn setup_multipool() -> Setup2 {
     set_hook(&amm.instance, Some(hook_id.into())).await;
     set_ownership(&amm.instance, Identity::Address(Address::default())).await;
 
-    (
-        amm,
-        wallet,
-        token_contract_id,
-        token_contract,
-        list,
-    )
+    (amm, wallet, token_contract_id, token_contract, list)
 }
