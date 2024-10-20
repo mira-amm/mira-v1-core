@@ -22,16 +22,6 @@ abi IBaseHook {
     );
 }
 
-fn get_fee(input: u64, is_stable: bool, fees: (u64, u64, u64, u64)) -> u64 {
-    let (lp_fee_volatile, lp_fee_stable, protocol_fee_volatile, protocol_fee_stable) = fees;
-    let total_fee = if is_stable {
-        lp_fee_stable + protocol_fee_stable
-    } else {
-        lp_fee_volatile + protocol_fee_volatile
-    };
-    calculate_fee(input, total_fee)
-}
-
 fn post_validate_curve(
     is_stable: bool,
     current_reserve_0: u64,
@@ -42,12 +32,20 @@ fn post_validate_curve(
     asset_1_in: u64,
     asset_0_out: u64,
     asset_1_out: u64,
-    fees: (u64, u64, u64, u64),
+    lp_fee: u64,
+    protocol_fee: u64,
 ) {
-    let previous_reserve_0 = current_reserve_0 - asset_0_in + asset_0_out;
-    let previous_reserve_1 = current_reserve_1 - asset_1_in + asset_1_out;
-    let current_reserve_without_fee_0 = current_reserve_0 - get_fee(asset_0_in, is_stable, fees);
-    let current_reserve_without_fee_1 = current_reserve_1 - get_fee(asset_1_in, is_stable, fees);
+    let asset_0_protocol_fee = calculate_fee(asset_0_in, protocol_fee);
+    let asset_1_protocol_fee = calculate_fee(asset_1_in, protocol_fee);
+    let asset_0_lp_fee = calculate_fee(asset_0_in, lp_fee);
+    let asset_1_lp_fee = calculate_fee(asset_1_in, lp_fee);
+
+    let reserve_0_increase = asset_0_in - asset_0_protocol_fee;
+    let reserve_1_increase = asset_1_in - asset_1_protocol_fee;
+    let previous_reserve_0 = current_reserve_0 - reserve_0_increase + asset_0_out;
+    let previous_reserve_1 = current_reserve_1 - reserve_1_increase + asset_1_out;
+    let current_reserve_without_fee_0 = current_reserve_0 - asset_0_lp_fee;
+    let current_reserve_without_fee_1 = current_reserve_1 - asset_1_lp_fee;
 
     validate_curve(
         is_stable,
@@ -76,7 +74,12 @@ impl IBaseHook for Contract {
             // it's a swap
             let amm = abi(MiraAMM, AMM_CONTRACT_ID.into());
             let pool = amm.pool_metadata(pool_id).unwrap();
-            let fees = amm.fees();
+            let (lp_fee_volatile, lp_fee_stable, protocol_fee_volatile, protocol_fee_stable) = amm.fees();
+            let (lp_fee, protocol_fee) = if is_stable(pool_id) {
+                (lp_fee_stable, protocol_fee_stable)
+            } else {
+                (lp_fee_volatile, protocol_fee_volatile)
+            };
             post_validate_curve(
                 is_stable(pool_id),
                 pool.reserve_0,
@@ -87,16 +90,11 @@ impl IBaseHook for Contract {
                 asset_1_in,
                 asset_0_out,
                 asset_1_out,
-                fees,
+                lp_fee,
+                protocol_fee,
             );
         }
     }
-}
-
-#[test]
-fn test_fees() {
-    assert_eq(get_fee(10, false, (30, 5, 0, 0)), 1);
-    assert_eq(get_fee(0, false, (30, 5, 0, 0)), 0);
 }
 
 #[test]
@@ -137,7 +135,8 @@ fn test_post_validate_curve_volatile() {
             input_1,
             output_0,
             output_1,
-            (30, 5, 0, 0),
+            30,
+            0,
         );
         i = i + 1;
     }
@@ -166,7 +165,8 @@ fn test_post_validate_curve_volatile_failure() {
             input_1,
             output_0,
             output_1,
-            (30, 5, 0, 0),
+            30,
+            0,
         );
         i = i + 1;
     }
