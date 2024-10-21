@@ -1,7 +1,7 @@
 contract;
 
 use utils::utils::is_stable;
-use interfaces::{data_structures::PoolId, mira_amm::MiraAMM};
+use interfaces::{data_structures::{Asset, PoolId, PoolMetadata}, mira_amm::MiraAMM};
 use math::pool_math::{calculate_fee, validate_curve};
 
 configurable {
@@ -58,6 +58,13 @@ fn post_validate_curve(
     );
 }
 
+fn validate_stable_pool_meta(pool: PoolMetadata) {
+    require(
+        pool.decimals_0 <= 9 && pool.decimals_1 <= 9,
+        "Decimals too big",
+    );
+}
+
 impl IBaseHook for Contract {
     #[storage(read, write)]
     fn hook(
@@ -93,6 +100,13 @@ impl IBaseHook for Contract {
                 lp_fee,
                 protocol_fee,
             );
+        } else if (asset_0_out == 0 && asset_1_out == 0) {
+            // it's a mint
+            if (is_stable(pool_id)) {
+                let amm = abi(MiraAMM, AMM_CONTRACT_ID.into());
+                let pool = amm.pool_metadata(pool_id).unwrap();
+                validate_stable_pool_meta(pool);
+            }
         }
     }
 }
@@ -173,4 +187,35 @@ fn test_protocol_fee_calculation() {
     test_cases.push((false, 10000, 10000, 1000, 0, 0, 1098, 6, 6));
 
     run_test_cases(test_cases, Some((0, 100))); // 1% protocol fee
+}
+
+fn build_pool_meta(decimals_0: u8, decimals_1: u8) -> PoolMetadata {
+    PoolMetadata {
+        reserve_0: 0,
+        reserve_1: 0,
+        liquidity: Asset::new(AssetId::default(), 0),
+        decimals_0,
+        decimals_1,
+    }
+}
+
+#[test]
+fn test_stable_pool_validation() {
+    validate_stable_pool_meta(build_pool_meta(0, 0));
+    validate_stable_pool_meta(build_pool_meta(0, 9));
+    validate_stable_pool_meta(build_pool_meta(9, 0));
+    validate_stable_pool_meta(build_pool_meta(9, 9));
+    validate_stable_pool_meta(build_pool_meta(5, 7));
+    validate_stable_pool_meta(build_pool_meta(2, 8));
+    validate_stable_pool_meta(build_pool_meta(8, 2));
+}
+
+#[test(should_revert)]
+fn test_stable_pool_validation_failure_decimals_0() {
+    validate_stable_pool_meta(build_pool_meta(10, 0));
+}
+
+#[test(should_revert)]
+fn test_stable_pool_validation_failure_decimals_1() {
+    validate_stable_pool_meta(build_pool_meta(0, 10));
 }
