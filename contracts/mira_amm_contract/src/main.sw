@@ -445,7 +445,6 @@ impl MiraAMM for Contract {
     #[storage(write)]
     fn set_protocol_fees(volatile_fee: u64, stable_fee: u64) {
         only_owner();
-        // protocol fees cannot exceed 20% of the LP fees
         require(
             volatile_fee <= get_max_protocol_fee(LP_FEE_VOLATILE) && stable_fee <= get_max_protocol_fee(LP_FEE_STABLE),
             InputError::ProtocolFeesAreTooHigh,
@@ -496,7 +495,7 @@ impl MiraAMM for Contract {
         log(MintEvent {
             pool_id,
             recipient: to,
-            liquidity: minted,
+            liquidity: minted, // doesn't include MINIMUM_LIQUIDITY minted to the owner
             asset_0_in,
             asset_1_in,
         });
@@ -598,7 +597,7 @@ impl MiraAMM for Contract {
 
         validate_curve(
             is_stable(pool_id),
-            balance_0_adjusted,
+            balance_0_adjusted, // here not the contract balance should be used, but the pool balance
             balance_1_adjusted,
             pool.reserve_0,
             pool.reserve_1,
