@@ -45,7 +45,7 @@ fn k(
         let _y: u256 = y.as_u256() * ONE_E_18 / pow_decimals(decimals_y);
         let _a: u256 = (_x * _y) / ONE_E_18;
         let _b: u256 = ((_x * _x) / ONE_E_18 + (_y * _y) / ONE_E_18);
-        return _a * _b / ONE_E_18; // x3y+y3x >= k
+        return _a * _b; // x3y+y3x >= k
     } else {
         return x.as_u256() * y.as_u256(); // xy >= k
     }
@@ -174,9 +174,9 @@ fn test_k_volatile() {
 
 #[test]
 fn test_k_stable() {
-    // (x3y+y3x)10^18
-    assert_eq(k(true, 1, 1, 0, 0), ONE_E_18 * 2);
-    assert_eq(k(true, 2, 2, 0, 0), ONE_E_18 * 32);
+    // (x3y+y3x)
+    assert_eq(k(true, 1, 1, 0, 0), ONE_E_18 * ONE_E_18 * 2);
+    assert_eq(k(true, 2, 2, 0, 0), ONE_E_18 * ONE_E_18 * 32);
 
     let mut random_pairs: Vec<(u64, u64)> = Vec::new();
     random_pairs.push((13123, 4253213));
@@ -191,10 +191,12 @@ fn test_k_stable() {
     }
 
     // k(0.3, 0.5) = 0,051
-    assert_eq(k(true, 300000, 500000, 6, 6), ONE_E_18 * 51 / 1000);
-    assert_eq(k(true, 3, 500000, 1, 6), ONE_E_18 * 51 / 1000);
-    assert_eq(k(true, 300000, 5, 6, 1), ONE_E_18 * 51 / 1000);
-    assert_eq(k(true, 300000000, 500, 9, 3), ONE_E_18 * 51 / 1000);
+    let expected = ONE_E_18 * ONE_E_18 * 51 / 1000;
+    assert_eq(k(true, 300000, 500000, 6, 6), expected);
+    assert_eq(k(true, 3, 500000, 1, 6), expected);
+    assert_eq(k(true, 300000, 5, 6, 1), expected);
+    assert_eq(k(true, 300000000, 500, 9, 3), expected);
+    assert_eq(k(true, 300000000, 500000000, 9, 9), expected);
 }
 
 #[test(should_revert)]
