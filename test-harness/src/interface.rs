@@ -6,13 +6,17 @@ abigen!(
         abi = "./contracts/mira_amm_contract/out/debug/mira_amm_contract-abi.json"
     ),
     Contract(
+        name = "ValidationHook",
+        abi = "./contracts/mira_validation_hook/out/debug/mira_validation_hook-abi.json"
+    ),
+    Contract(
         name = "MockToken",
         abi = "./contracts/mocks/mock_token/out/debug/mock_token-abi.json"
     )
 );
 
 pub mod amm {
-    use fuels::prelude::VariableOutputPolicy;
+    use fuels::prelude::{Bech32ContractId, VariableOutputPolicy};
     use fuels::programs::calls::CallParameters;
     use fuels::programs::responses::CallResponse;
     use fuels::types::{Bits256, Bytes, ContractId, Identity};
@@ -65,6 +69,9 @@ pub mod amm {
             .methods()
             .mint(pool_id, to)
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
@@ -84,6 +91,9 @@ pub mod amm {
             .call_params(params)
             .unwrap()
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
@@ -101,6 +111,9 @@ pub mod amm {
             .methods()
             .swap(pool_id, amount_0_out, amount_1_out, to, data)
             .with_variable_output_policy(VariableOutputPolicy::Exactly(2))
+            .determine_missing_contracts(None)
+            .await
+            .unwrap()
             .call()
             .await
             .unwrap()
@@ -111,6 +124,13 @@ pub mod amm {
         new_owner: Identity,
     ) -> CallResponse<()> {
         contract.methods().transfer_ownership(new_owner).call().await.unwrap()
+    }
+
+    pub async fn set_hook(
+        contract: &MiraAMM<WalletUnlocked>,
+        hook_id: Option<ContractId>,
+    ) -> CallResponse<()> {
+        contract.methods().set_hook(hook_id).call().await.unwrap()
     }
 }
 

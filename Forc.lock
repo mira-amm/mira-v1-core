@@ -28,6 +28,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mira_validation_hook"
+source = "member"
+dependencies = [
+    "interfaces",
+    "math",
+    "std",
+    "utils",
+]
+
+[[package]]
 name = "mock_token"
 source = "member"
 dependencies = [

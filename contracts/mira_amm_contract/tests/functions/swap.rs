@@ -1,6 +1,7 @@
-use crate::utils::Setup;
+use crate::utils::{Setup, Setup2};
 use fuels::accounts::Account;
 use fuels::prelude::TxPolicies;
+use fuels::types::{AssetId, Bits256};
 use test_harness::data_structures::MiraAMMContract;
 use test_harness::interface::amm::{create_pool, mint};
 use test_harness::types::PoolId;
@@ -13,6 +14,45 @@ async fn setup_pool(setup: &Setup, stable_pool: bool) -> PoolId {
         token_contract,
         (token_0_id, token_1_id),
         (token_0_sub_id, token_1_sub_id),
+    ) = setup;
+    let pool_id = create_pool(
+        &amm,
+        &token_contract,
+        *token_contract_id,
+        *token_0_sub_id,
+        *token_contract_id,
+        *token_1_sub_id,
+        stable_pool,
+    )
+    .await
+    .value;
+    let amm_address = amm_id.clone().into();
+    wallet
+        .force_transfer_to_contract(&amm_address, 1_020_100, *token_0_id, TxPolicies::default())
+        .await
+        .unwrap();
+    wallet
+        .force_transfer_to_contract(&amm_address, 10_000, *token_1_id, TxPolicies::default())
+        .await
+        .unwrap();
+    mint(&amm, pool_id, wallet.address().into()).await.value;
+    pool_id
+}
+
+async fn setup_pool_2(
+    setup: &Setup2,
+    token_0_id: &AssetId,
+    token_1_id: &AssetId,
+    token_0_sub_id: &Bits256,
+    token_1_sub_id: &Bits256,
+    stable_pool: bool,
+) -> PoolId {
+    let (
+        MiraAMMContract { id: amm_id, instance: amm },
+        wallet,
+        token_contract_id,
+        token_contract,
+        tokens,
     ) = setup;
     let pool_id = create_pool(
         &amm,
@@ -116,8 +156,8 @@ mod success {
 }
 
 mod revert {
-    use crate::functions::swap::setup_pool;
-    use crate::utils::setup;
+    use crate::functions::swap::{setup_pool, setup_pool_2};
+    use crate::utils::{setup, setup_multipool};
     use fuels::accounts::Account;
     use fuels::prelude::TxPolicies;
     use fuels::types::Identity;
@@ -183,6 +223,47 @@ mod revert {
             .await
             .unwrap();
         swap(&amm.instance, pool_id, 0, 10, to, None).await;
+    }
+
+    #[tokio::test]
+    // #[should_panic(expected = "CurveInvariantViolation")]
+    #[should_panic()]
+    async fn test_multiple_pool_swap_violate_curve() {
+        let setup = setup_multipool().await;
+        let pool_id_a = setup_pool_2(
+            &setup,
+            &setup.4.get(0).unwrap().0,
+            &setup.4.get(1).unwrap().0,
+            &setup.4.get(0).unwrap().1,
+            &setup.4.get(1).unwrap().1,
+            false,
+        )
+        .await;
+        let pool_id_b = setup_pool_2(
+            &setup,
+            &setup.4.get(1).unwrap().0,
+            &setup.4.get(2).unwrap().0,
+            &setup.4.get(1).unwrap().1,
+            &setup.4.get(2).unwrap().1,
+            false,
+        )
+        .await;
+
+        let wallet = setup.1;
+        let amm = setup.0;
+
+        let to = Identity::from(wallet.address());
+        let amm_address = amm.id.into();
+        wallet
+            .force_transfer_to_contract(
+                &amm_address,
+                1000,
+                setup.4.get(0).unwrap().0,
+                TxPolicies::default(),
+            )
+            .await
+            .unwrap();
+        swap(&amm.instance, pool_id_a, 0, 10, to, None).await;
     }
 
     #[tokio::test]
